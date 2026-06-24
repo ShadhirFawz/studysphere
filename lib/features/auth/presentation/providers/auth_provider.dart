@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../data/repositories/auth_repository.dart';
+import '../../../../core/services/auth_service.dart';
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository();
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
 });
 
-final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.read(authRepositoryProvider).authStateChanges();
+final authStateProvider = StreamProvider((ref) {
+  return ref.read(authServiceProvider).authStateChanges();
 });

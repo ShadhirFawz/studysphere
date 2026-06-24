@@ -2,15 +2,25 @@ class UserModel {
   final String uid;
   final String email;
   final String fullName;
+  final String role;
+  final DateTime createdAt;
 
   const UserModel({
     required this.uid,
     required this.email,
     required this.fullName,
+    required this.role,
+    required this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
-    return {'uid': uid, 'email': email, 'fullName': fullName};
+    return {
+      'uid': uid,
+      'email': email,
+      'fullName': fullName,
+      'role': role,
+      'createdAt': createdAt.toIso8601String(),
+    };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -18,6 +28,8 @@ class UserModel {
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       fullName: map['fullName'] ?? '',
+      role: map['role'] ?? 'student',
+      createdAt: DateTime.parse(map['createdAt']),
     );
   }
 }
