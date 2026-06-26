@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/models/user_model.dart';
 import '../../../../core/utils/firebase_error_helper.dart';
@@ -192,10 +193,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      // Navigate to login
-                      // Navigator.pushReplacement(context, MaterialPageRoute(
-                      //   builder: (context) => const LoginScreen(),
-                      // ));
+                      context.push('/login');
                     },
                     child: const Text(
                       'Login',

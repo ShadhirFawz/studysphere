@@ -1,0 +1,15 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../data/models/profile_model.dart';
+import '../../data/repositories/profile_repository.dart';
+
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  return ProfileRepository();
+});
+
+final profileProvider = FutureProvider.family<ProfileModel?, String>((
+  ref,
+  uid,
+) async {
+  return ref.read(profileRepositoryProvider).getCurrentProfile(uid);
+});

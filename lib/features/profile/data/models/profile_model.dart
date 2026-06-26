@@ -13,6 +13,9 @@ class ProfileModel {
 
   final String role;
 
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
   const ProfileModel({
     required this.uid,
     required this.fullName,
@@ -23,6 +26,8 @@ class ProfileModel {
     required this.courses,
     required this.studyHabit,
     required this.role,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +41,8 @@ class ProfileModel {
       'courses': courses,
       'studyHabit': studyHabit,
       'role': role,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
@@ -50,6 +57,12 @@ class ProfileModel {
       courses: List<String>.from(map['courses'] ?? []),
       studyHabit: map['studyHabit'] ?? '',
       role: map['role'] ?? 'student',
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : DateTime.now(),
     );
   }
 }
