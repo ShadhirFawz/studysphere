@@ -1,18 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/profile_provider.dart';
+import '../../../../shared/providers/current_user_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    final profile = ref.watch(profileProvider(uid));
+    final profile = ref.watch(currentUserProvider);
 
     return profile.when(
       data: (user) {
