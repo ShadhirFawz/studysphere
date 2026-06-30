@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Users/shadh/Documents/StudySphere/studysphere/windows"
+    "cmake.sourceDirectory": "C:/Users/shadh/Documents/StudySphere/studysphere/windows",
+    "java.compile.nullAnalysis.mode": "automatic"
 }

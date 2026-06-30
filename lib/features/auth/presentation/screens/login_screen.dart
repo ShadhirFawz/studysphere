@@ -52,13 +52,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authService = ref.read(authServiceProvider);
+      final authRepository = ref.read(authRepositoryProvider);
 
-      await authService.signIn(email: email, password: password);
+      await authRepository.signIn(email: email, password: password);
 
       if (mounted) {
         _showSnackBar('Login successful!');
-        context.go('/dashboard');
+        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -103,78 +103,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
 
-              const Text(
-                'Welcome Back!',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Login to continue',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 32),
-
-              CustomTextField(controller: _emailController, label: 'Email'),
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Password',
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    // Navigate to forgot password
-                  },
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                const Text(
+                  'Welcome Back!',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                const Text(
+                  'Login to continue',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 32),
 
-              _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  : PrimaryButton(text: 'Login', onPressed: _loginUser),
-              const SizedBox(height: 16),
+                CustomTextField(controller: _emailController, label: 'Email'),
+                const SizedBox(height: 16),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Don't have an account?",
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  TextButton(
+                CustomTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  obscureText: true,
+                ),
+                const SizedBox(height: 8),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
                     onPressed: () {
-                      context.push('/register');
+                      // Navigate to forgot password
                     },
                     child: const Text(
-                      'Register',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Forgot Password?',
+                      style: TextStyle(fontSize: 14),
                     ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 24),
+
+                _isLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : PrimaryButton(text: 'Login', onPressed: _loginUser),
+                const SizedBox(height: 16),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an account?",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        context.push('/register');
+                      },
+                      child: const Text(
+                        'Register',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),

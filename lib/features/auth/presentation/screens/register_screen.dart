@@ -61,10 +61,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authService = ref.read(authServiceProvider);
+      final authRepository = ref.read(authRepositoryProvider);
       final userRepository = ref.read(userRepositoryProvider);
 
-      final credential = await authService.signUp(
+      final credential = await authRepository.signUp(
         email: email,
         password: password,
       );
@@ -86,7 +86,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         _showSnackBar('Account created successfully!');
-        // Navigate to login or home
+        if (context.mounted) {
+          context.go('/login');
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -127,85 +129,92 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
+          child: SingleChildScrollView(
+            // ← Wrap with this
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
 
-              // Header
-              const Text(
-                'Create Your Account',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Fill in the details below to get started',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 32),
-
-              // Name Field
-              CustomTextField(controller: _nameController, label: 'Full Name'),
-              const SizedBox(height: 16),
-
-              // Email Field
-              CustomTextField(controller: _emailController, label: 'Email'),
-              const SizedBox(height: 16),
-
-              // Password Field
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Password',
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Must be at least 6 characters',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                // Header
+                const Text(
+                  'Create Your Account',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                const Text(
+                  'Fill in the details below to get started',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 32),
 
-              // Register Button
-              _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  : PrimaryButton(
-                      text: 'Create Account',
-                      onPressed: _registerUser,
-                    ),
-              const SizedBox(height: 16),
+                // Name Field
+                CustomTextField(
+                  controller: _nameController,
+                  label: 'Full Name',
+                ),
+                const SizedBox(height: 16),
 
-              // Login Navigation
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Already have an account?',
-                    style: TextStyle(fontSize: 14),
+                // Email Field
+                CustomTextField(controller: _emailController, label: 'Email'),
+                const SizedBox(height: 16),
+
+                // Password Field
+                CustomTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  obscureText: true,
+                ),
+                const SizedBox(height: 8),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Must be at least 6 characters',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      context.push('/login');
-                    },
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 24),
+
+                // Register Button
+                _isLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : PrimaryButton(
+                        text: 'Create Account',
+                        onPressed: _registerUser,
+                      ),
+                const SizedBox(height: 16),
+
+                // Login Navigation
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Already have an account?',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        context.push('/login');
+                      },
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
