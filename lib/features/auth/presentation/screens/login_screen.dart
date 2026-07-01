@@ -58,7 +58,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (mounted) {
         _showSnackBar('Login successful!');
-        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {

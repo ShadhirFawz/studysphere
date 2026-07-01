@@ -1,8 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
-import '../../features/auth/presentation/screens/auth_gate.dart';
 
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -13,9 +13,32 @@ import '../../features/community/presentation/screens/community_screen.dart';
 
 import '../../features/navigation/presentation/screens/navigation_shell.dart';
 
+import 'router_refresh_stream.dart';
+
 class AppRouter {
   static final router = GoRouter(
-    initialLocation: '/',
+    initialLocation: '/login',
+
+    refreshListenable: RouterRefreshStream(
+      FirebaseAuth.instance.authStateChanges(),
+    ),
+    redirect: (context, state) {
+      final user = FirebaseAuth.instance.currentUser;
+
+      final loggingIn =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
+
+      if (user == null) {
+        return loggingIn ? null : '/login';
+      }
+
+      if (loggingIn) {
+        return '/home';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
 
@@ -23,8 +46,6 @@ class AppRouter {
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
       ),
-
-      GoRoute(path: '/', builder: (context, state) => const AuthGate()),
 
       GoRoute(
         path: '/edit-profile',

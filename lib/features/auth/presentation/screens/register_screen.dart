@@ -86,9 +86,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         _showSnackBar('Account created successfully!');
-        if (context.mounted) {
-          context.go('/login');
-        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
