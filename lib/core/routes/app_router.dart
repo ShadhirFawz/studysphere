@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:studysphere/features/assignments/data/models/assignment_model.dart';
+import 'package:studysphere/features/assignments/presentation/screens/add_assignment_screen.dart';
+import 'package:studysphere/features/assignments/presentation/screens/edit_assignment_screen.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -73,6 +76,17 @@ class AppRouter {
               GoRoute(
                 path: '/assignments',
                 builder: (context, state) => const AssignmentScreen(),
+              ),
+              GoRoute(
+                path: '/add-assignment',
+                builder: (context, state) => const AddAssignmentScreen(),
+              ),
+              GoRoute(
+                path: '/edit-assignment',
+                builder: (context, state) {
+                  final assignment = state.extra as AssignmentModel;
+                  return EditAssignmentScreen(assignment: assignment);
+                },
               ),
             ],
           ),
