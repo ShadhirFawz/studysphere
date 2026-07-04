@@ -116,8 +116,8 @@ class AssignmentCard extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  PriorityChip(priority: assignment.priority.name),
-                  StatusChip(status: assignment.status.name),
+                  PriorityChip(priority: assignment.priority),
+                  StatusChip(status: assignment.status),
                 ],
               ),
 

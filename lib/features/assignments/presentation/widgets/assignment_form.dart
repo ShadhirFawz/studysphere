@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 
+import '../providers/cloudinary_provider.dart';
+import '../widgets/attachment_picker.dart';
+import '../../data/models/assignment_attachment.dart';
 import '../../data/models/assignment_checklist_item.dart';
 import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_tag.dart';
 
-class AssignmentForm extends StatefulWidget {
+class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
   final Function(AssignmentModel) onSubmit;
   final String ownerId;
@@ -18,11 +23,12 @@ class AssignmentForm extends StatefulWidget {
   });
 
   @override
-  State<AssignmentForm> createState() => _AssignmentFormState();
+  ConsumerState<AssignmentForm> createState() => _AssignmentFormState();
 }
 
-class _AssignmentFormState extends State<AssignmentForm> {
+class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   final _formKey = GlobalKey<FormState>();
+  List<File> selectedFiles = [];
 
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
@@ -99,12 +105,42 @@ class _AssignmentFormState extends State<AssignmentForm> {
     }
   }
 
-  void submit() {
+  Future<void> submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final now = Timestamp.now();
+
+    List<AssignmentAttachment> uploadedAttachments = List.from(
+      widget.assignment?.attachments ?? [],
+    );
+
+    if (selectedFiles.isNotEmpty) {
+      final uploader = ref.read(cloudinaryProvider);
+
+      for (final file in selectedFiles) {
+        final url = await uploader.uploadFile(file);
+
+        uploadedAttachments.add(
+          AssignmentAttachment(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+
+            fileName: file.path.split('/').last,
+
+            fileUrl: url,
+
+            fileType: file.path.split('.').last.toLowerCase(),
+
+            fileSize: await file.length(),
+
+            uploadedBy: widget.ownerId,
+
+            uploadedAt: Timestamp.now(),
+          ),
+        );
+      }
+    }
 
     final assignment = AssignmentModel(
       id: widget.assignment?.id ?? "",
@@ -123,6 +159,7 @@ class _AssignmentFormState extends State<AssignmentForm> {
       checklist: widget.assignment?.checklist ?? <AssignmentChecklistItem>[],
       tags: widget.assignment?.tags ?? <AssignmentTag>[],
       notes: notesController.text.trim(),
+      attachments: uploadedAttachments,
       createdAt: widget.assignment?.createdAt ?? now,
       updatedAt: now,
     );
@@ -243,6 +280,36 @@ class _AssignmentFormState extends State<AssignmentForm> {
           ),
 
           const SizedBox(height: 20),
+
+          if (widget.assignment != null &&
+              widget.assignment!.attachments.isNotEmpty) ...[
+            const Text(
+              "Current Attachments",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+
+            const SizedBox(height: 10),
+
+            ...widget.assignment!.attachments.map(
+              (file) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.attach_file),
+                  title: Text(file.fileName),
+                  subtitle: Text(file.fileType),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+
+          AttachmentPicker(
+            onChanged: (files) {
+              selectedFiles = files;
+            },
+          ),
+
+          const SizedBox(height: 24),
 
           TextFormField(
             controller: notesController,

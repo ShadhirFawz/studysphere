@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 
 import 'assignment_checklist_item.dart';
 import 'assignment_tag.dart';
+import 'assignment_attachment.dart';
 
 enum AssignmentType { homework, lab, quiz, presentation, project, exam, custom }
 
@@ -44,6 +45,8 @@ class AssignmentModel extends Equatable {
 
   final String notes;
 
+  final List<AssignmentAttachment> attachments;
+
   final Timestamp createdAt;
   final Timestamp updatedAt;
 
@@ -64,6 +67,7 @@ class AssignmentModel extends Equatable {
     required this.checklist,
     required this.tags,
     required this.notes,
+    required this.attachments,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -85,6 +89,7 @@ class AssignmentModel extends Equatable {
     List<AssignmentChecklistItem>? checklist,
     List<AssignmentTag>? tags,
     String? notes,
+    List<AssignmentAttachment>? attachments,
     Timestamp? createdAt,
     Timestamp? updatedAt,
   }) {
@@ -105,6 +110,7 @@ class AssignmentModel extends Equatable {
       checklist: checklist ?? this.checklist,
       tags: tags ?? this.tags,
       notes: notes ?? this.notes,
+      attachments: attachments ?? this.attachments,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -127,6 +133,7 @@ class AssignmentModel extends Equatable {
       'checklist': checklist.map((e) => e.toMap()).toList(),
       'tags': tags.map((e) => e.toMap()).toList(),
       'notes': notes,
+      'attachments': attachments.map((e) => e.toMap()).toList(),
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -171,6 +178,14 @@ class AssignmentModel extends Equatable {
           .map((e) => AssignmentTag.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
       notes: map['notes'] ?? '',
+      attachments:
+          (map['attachments'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    AssignmentAttachment.fromMap(Map<String, dynamic>.from(e)),
+              )
+              .toList() ??
+          [],
       createdAt: map['createdAt'] ?? Timestamp.now(),
       updatedAt: map['updatedAt'] ?? Timestamp.now(),
     );
@@ -194,6 +209,7 @@ class AssignmentModel extends Equatable {
     checklist,
     tags,
     notes,
+    attachments,
     createdAt,
     updatedAt,
   ];
