@@ -6,7 +6,7 @@ class AssignmentRepository {
 
   AssignmentRepository(this._datasource);
 
-  Future<void> createAssignment(AssignmentModel assignment) {
+  Future<String> createAssignment(AssignmentModel assignment) {
     return _datasource.createAssignment(assignment);
   }
 
@@ -14,15 +14,19 @@ class AssignmentRepository {
     return _datasource.updateAssignment(assignment);
   }
 
-  Future<void> deleteAssignment(String id) {
-    return _datasource.deleteAssignment(id);
+  Future<void> deleteAssignment(String assignmentId) {
+    return _datasource.deleteAssignment(assignmentId);
   }
 
-  Stream<List<AssignmentModel>> getUserAssignments(String userId) {
-    return _datasource.getUserAssignments(userId);
+  Future<AssignmentModel?> getAssignmentById(String assignmentId) {
+    return _datasource.getAssignmentById(assignmentId);
   }
 
-  Future<AssignmentModel?> getAssignmentById(String id) {
-    return _datasource.getAssignmentById(id);
+  Stream<List<AssignmentModel>> getUserAssignments(String ownerId) {
+    return _datasource.getUserAssignments(ownerId);
+  }
+
+  Stream<List<AssignmentModel>> getUpcomingAssignments(String ownerId) {
+    return _datasource.getUpcomingAssignments(ownerId);
   }
 }

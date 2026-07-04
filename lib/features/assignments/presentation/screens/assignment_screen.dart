@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_loading.dart';
-import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 
 import '../providers/assignment_provider.dart';
@@ -15,7 +15,7 @@ class AssignmentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assignmentsAsync = ref.watch(assignmentsStreamProvider);
+    final assignmentsAsync = ref.watch(assignmentsProvider);
 
     return AppScaffold(
       title: "Assignments",
@@ -40,12 +40,11 @@ class AssignmentScreen extends ConsumerWidget {
           }
 
           return ListView.separated(
+            padding: const EdgeInsets.all(16),
             itemCount: assignments.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final assignment = assignments[index];
-
-              return AssignmentCard(assignment: assignment);
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (_, index) {
+              return AssignmentCard(assignment: assignments[index]);
             },
           );
         },
