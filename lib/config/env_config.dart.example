@@ -1,0 +1,11 @@
+/// Configuration template for sensitive environment variables.
+/// IMPORTANT: Copy this file to 'env_config.dart' and fill in with your actual values.
+/// DO NOT commit 'env_config.dart' to version control.
+
+class EnvConfig {
+  // Cloudinary Configuration
+  static const String cloudinaryCloudName = "YOUR_CLOUD_NAME";
+  static const String cloudinaryUploadPreset = "YOUR_UPLOAD_PRESET";
+
+  // Add other sensitive configs here as needed
+}

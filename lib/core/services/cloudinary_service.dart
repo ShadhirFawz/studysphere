@@ -1,10 +1,11 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:studysphere/config/env_config.dart';
 
 class CloudinaryService {
-  static const String cloudName = "YOUR_CLOUD_NAME";
-  static const String uploadPreset = "YOUR_UPLOAD_PRESET";
+  static const String cloudName = EnvConfig.cloudinaryCloudName;
+  static const String uploadPreset = EnvConfig.cloudinaryUploadPreset;
 
   final Dio _dio = Dio();
 
