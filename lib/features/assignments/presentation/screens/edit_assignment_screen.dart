@@ -22,9 +22,9 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
   late TextEditingController descriptionController;
   late TextEditingController courseController;
 
-  late String priority;
-  late String status;
-  DateTime? dueDate; // Changed from late to nullable
+  late AssignmentPriority priority;
+  late AssignmentStatus status;
+  DateTime? dueDate;
 
   bool loading = false;
 
@@ -85,7 +85,6 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Title Field
             TextField(
               controller: titleController,
               decoration: const InputDecoration(
@@ -96,7 +95,6 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 12),
 
-            // Description Field
             TextField(
               controller: descriptionController,
               decoration: const InputDecoration(
@@ -108,7 +106,6 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 12),
 
-            // Course Field
             TextField(
               controller: courseController,
               decoration: const InputDecoration(
@@ -119,11 +116,15 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 12),
 
-            // Priority Dropdown
-            DropdownButtonFormField<String>(
-              value: priority,
+            DropdownButtonFormField<AssignmentPriority>(
+              initialValue: priority,
               items: AssignmentPriority.values
-                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .map(
+                    (p) => DropdownMenuItem<AssignmentPriority>(
+                      value: p,
+                      child: Text(p.name),
+                    ),
+                  )
                   .toList(),
               onChanged: (val) {
                 setState(() {
@@ -138,11 +139,15 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 12),
 
-            // Status Dropdown
-            DropdownButtonFormField<String>(
-              value: status,
+            DropdownButtonFormField<AssignmentStatus>(
+              initialValue: status,
               items: AssignmentStatus.values
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .map(
+                    (s) => DropdownMenuItem<AssignmentStatus>(
+                      value: s,
+                      child: Text(s.name),
+                    ),
+                  )
                   .toList(),
               onChanged: (val) {
                 setState(() {
@@ -157,7 +162,6 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 12),
 
-            // Due Date Picker
             ElevatedButton(
               onPressed: () async {
                 final picked = await showDatePicker(
@@ -181,7 +185,6 @@ class _EditAssignmentScreenState extends ConsumerState<EditAssignmentScreen> {
 
             const SizedBox(height: 20),
 
-            // Save Changes Button
             ElevatedButton(
               onPressed: loading ? null : updateAssignment,
               child: Text(loading ? "Saving..." : "Save Changes"),
