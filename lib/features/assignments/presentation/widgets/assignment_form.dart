@@ -9,6 +9,7 @@ import '../../data/models/assignment_attachment.dart';
 import '../../data/models/assignment_checklist_item.dart';
 import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_tag.dart';
+import 'assignment_attachment_card.dart';
 
 class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
@@ -29,6 +30,8 @@ class AssignmentForm extends ConsumerStatefulWidget {
 class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   final _formKey = GlobalKey<FormState>();
   List<File> selectedFiles = [];
+
+  List<AssignmentAttachment> uploadedAttachments = [];
 
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
@@ -63,6 +66,8 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     estimatedHoursController = TextEditingController(
       text: assignment?.estimatedHours.toString() ?? "1",
     );
+
+    uploadedAttachments = List.from(widget.assignment?.attachments ?? []);
 
     if (assignment != null) {
       type = assignment.type;
@@ -111,10 +116,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     }
 
     final now = Timestamp.now();
-
-    List<AssignmentAttachment> uploadedAttachments = List.from(
-      widget.assignment?.attachments ?? [],
-    );
 
     if (selectedFiles.isNotEmpty) {
       final uploader = ref.read(cloudinaryProvider);
@@ -290,15 +291,19 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
             const SizedBox(height: 10),
 
-            ...widget.assignment!.attachments.map(
-              (file) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.attach_file),
-                  title: Text(file.fileName),
-                  subtitle: Text(file.fileType),
-                ),
-              ),
-            ),
+            ...uploadedAttachments.asMap().entries.map((entry) {
+              final index = entry.key;
+              final file = entry.value;
+
+              return AssignmentAttachmentCard(
+                attachment: file,
+                onDelete: () {
+                  setState(() {
+                    uploadedAttachments.removeAt(index);
+                  });
+                },
+              );
+            }),
 
             const SizedBox(height: 20),
           ],
