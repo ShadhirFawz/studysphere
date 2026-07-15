@@ -33,9 +33,9 @@ class AssignmentCard extends ConsumerWidget {
         .deleteAssignment(assignment.id);
   }
 
-  Color _progressColor() {
-    if (assignment.progress >= 100) return Colors.green;
-    if (assignment.progress >= 60) return Colors.orange;
+  Color _progressColor(int progress) {
+    if (progress >= 100) return Colors.green;
+    if (progress >= 60) return Colors.orange;
     return Colors.blue;
   }
 
@@ -69,6 +69,9 @@ class AssignmentCard extends ConsumerWidget {
     final isCompleted = assignment.status == AssignmentStatus.completed;
     final daysRemaining = _getDaysRemaining();
     final daysColor = _getDaysRemainingColor();
+    final progress = ref
+        .read(assignmentRepositoryProvider)
+        .getAssignmentProgress(assignment);
 
     return Dismissible(
       key: ValueKey(assignment.id),
@@ -282,8 +285,8 @@ class AssignmentCard extends ConsumerWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
-                          value: assignment.progress / 100,
-                          color: _progressColor(),
+                          value: progress / 100,
+                          color: _progressColor(progress),
                           backgroundColor: Colors.grey.shade200,
                           minHeight: 4,
                         ),
@@ -291,11 +294,11 @@ class AssignmentCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${assignment.progress}%',
+                      '$progress%',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: _progressColor(),
+                        color: _progressColor(progress),
                       ),
                     ),
                   ],

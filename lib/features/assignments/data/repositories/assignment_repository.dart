@@ -1,3 +1,4 @@
+import '../../domain/services/assignment_progress_service.dart';
 import '../datasources/assignment_datasource.dart';
 import '../models/assignment_model.dart';
 
@@ -28,5 +29,14 @@ class AssignmentRepository {
 
   Stream<List<AssignmentModel>> getUpcomingAssignments(String ownerId) {
     return _datasource.getUpcomingAssignments(ownerId);
+  }
+
+  int getAssignmentProgress(AssignmentModel assignment) {
+    return const AssignmentProgressService().calculateProgress(
+      now: DateTime.now(),
+      startDate: assignment.startDate.toDate(),
+      dueDate: assignment.dueDate.toDate(),
+      isMultiDay: assignment.isMultiDay,
+    );
   }
 }

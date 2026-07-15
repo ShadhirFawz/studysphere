@@ -44,6 +44,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   AssignmentStatus status = AssignmentStatus.pending;
   AssignmentDifficulty difficulty = AssignmentDifficulty.medium;
 
+  bool isMultiDay = true;
   DateTime startDate = DateTime.now();
   DateTime dueDate = DateTime.now().add(const Duration(days: 7));
 
@@ -66,6 +67,8 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     estimatedHoursController = TextEditingController(
       text: assignment?.estimatedHours.toString() ?? "1",
     );
+
+    isMultiDay = widget.assignment?.isMultiDay ?? true;
 
     uploadedAttachments = List.from(widget.assignment?.attachments ?? []);
 
@@ -153,10 +156,10 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       priority: priority,
       status: status,
       difficulty: difficulty,
-      progress: widget.assignment?.progress ?? 0,
       estimatedHours: double.tryParse(estimatedHoursController.text) ?? 1,
-      startDate: Timestamp.fromDate(startDate),
+      startDate: Timestamp.fromDate(isMultiDay ? startDate : dueDate),
       dueDate: Timestamp.fromDate(dueDate),
+      isMultiDay: isMultiDay,
       checklist: widget.assignment?.checklist ?? <AssignmentChecklistItem>[],
       tags: widget.assignment?.tags ?? <AssignmentTag>[],
       notes: notesController.text.trim(),
@@ -199,7 +202,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           const SizedBox(height: 16),
 
           DropdownButtonFormField<AssignmentType>(
-            value: type,
+            initialValue: type,
             decoration: const InputDecoration(labelText: "Type"),
             items: AssignmentType.values
                 .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
@@ -214,7 +217,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           const SizedBox(height: 16),
 
           DropdownButtonFormField<AssignmentPriority>(
-            value: priority,
+            initialValue: priority,
             decoration: const InputDecoration(labelText: "Priority"),
             items: AssignmentPriority.values
                 .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
@@ -229,7 +232,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           const SizedBox(height: 16),
 
           DropdownButtonFormField<AssignmentStatus>(
-            value: status,
+            initialValue: status,
             decoration: const InputDecoration(labelText: "Status"),
             items: AssignmentStatus.values
                 .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
@@ -244,7 +247,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           const SizedBox(height: 16),
 
           DropdownButtonFormField<AssignmentDifficulty>(
-            value: difficulty,
+            initialValue: difficulty,
             decoration: const InputDecoration(labelText: "Difficulty"),
             items: AssignmentDifficulty.values
                 .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
@@ -262,6 +265,21 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
             controller: estimatedHoursController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(labelText: "Estimated Hours"),
+          ),
+
+          const SizedBox(height: 20),
+
+          SwitchListTile(
+            title: const Text("Multi-Day Assignment"),
+            subtitle: const Text(
+              "Enable if this assignment spans multiple days.",
+            ),
+            value: isMultiDay,
+            onChanged: (value) {
+              setState(() {
+                isMultiDay = value;
+              });
+            },
           ),
 
           const SizedBox(height: 20),

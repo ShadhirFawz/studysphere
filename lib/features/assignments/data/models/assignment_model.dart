@@ -34,8 +34,9 @@ class AssignmentModel extends Equatable {
   final AssignmentStatus status;
   final AssignmentDifficulty difficulty;
 
-  final int progress;
   final double estimatedHours;
+
+  final bool isMultiDay;
 
   final Timestamp startDate;
   final Timestamp dueDate;
@@ -60,8 +61,8 @@ class AssignmentModel extends Equatable {
     required this.priority,
     required this.status,
     required this.difficulty,
-    required this.progress,
     required this.estimatedHours,
+    required this.isMultiDay,
     required this.startDate,
     required this.dueDate,
     required this.checklist,
@@ -82,8 +83,8 @@ class AssignmentModel extends Equatable {
     AssignmentPriority? priority,
     AssignmentStatus? status,
     AssignmentDifficulty? difficulty,
-    int? progress,
     double? estimatedHours,
+    bool? isMultiDay,
     Timestamp? startDate,
     Timestamp? dueDate,
     List<AssignmentChecklistItem>? checklist,
@@ -103,8 +104,8 @@ class AssignmentModel extends Equatable {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       difficulty: difficulty ?? this.difficulty,
-      progress: progress ?? this.progress,
       estimatedHours: estimatedHours ?? this.estimatedHours,
+      isMultiDay: isMultiDay ?? this.isMultiDay,
       startDate: startDate ?? this.startDate,
       dueDate: dueDate ?? this.dueDate,
       checklist: checklist ?? this.checklist,
@@ -126,8 +127,8 @@ class AssignmentModel extends Equatable {
       'priority': priority.name,
       'status': status.name,
       'difficulty': difficulty.name,
-      'progress': progress,
       'estimatedHours': estimatedHours,
+      'isMultiDay': isMultiDay,
       'startDate': startDate,
       'dueDate': dueDate,
       'checklist': checklist.map((e) => e.toMap()).toList(),
@@ -164,8 +165,8 @@ class AssignmentModel extends Equatable {
         (e) => e.name == map['difficulty'],
         orElse: () => AssignmentDifficulty.medium,
       ),
-      progress: map['progress'] ?? 0,
       estimatedHours: (map['estimatedHours'] ?? 0).toDouble(),
+      isMultiDay: map['isMultiDay'] ?? false,
       startDate: map['startDate'] ?? Timestamp.now(),
       dueDate: map['dueDate'] ?? Timestamp.now(),
       checklist: (map['checklist'] as List? ?? [])
@@ -202,8 +203,8 @@ class AssignmentModel extends Equatable {
     priority,
     status,
     difficulty,
-    progress,
     estimatedHours,
+    isMultiDay,
     startDate,
     dueDate,
     checklist,
