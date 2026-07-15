@@ -40,9 +40,9 @@ class AssignmentScreen extends ConsumerWidget {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(left: 2, right: 2),
             itemCount: assignments.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: 2),
             itemBuilder: (_, index) {
               return AssignmentCard(assignment: assignments[index]);
             },

@@ -4,8 +4,11 @@ import '../models/assignment_model.dart';
 
 class AssignmentRepository {
   final AssignmentDatasource _datasource;
+  late final AssignmentProgressService _progressService;
 
-  AssignmentRepository(this._datasource);
+  AssignmentRepository(this._datasource) {
+    _progressService = AssignmentProgressService();
+  }
 
   Future<String> createAssignment(AssignmentModel assignment) {
     return _datasource.createAssignment(assignment);
@@ -32,11 +35,6 @@ class AssignmentRepository {
   }
 
   int getAssignmentProgress(AssignmentModel assignment) {
-    return const AssignmentProgressService().calculateProgress(
-      now: DateTime.now(),
-      startDate: assignment.startDate.toDate(),
-      dueDate: assignment.dueDate.toDate(),
-      isMultiDay: assignment.isMultiDay,
-    );
+    return _progressService.calculateProgress(assignment);
   }
 }

@@ -44,7 +44,8 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   AssignmentStatus status = AssignmentStatus.pending;
   AssignmentDifficulty difficulty = AssignmentDifficulty.medium;
 
-  bool isMultiDay = true;
+  bool isMultiDay = false; // Default: disabled (single day)
+  DateTime selectedDate = DateTime.now();
   DateTime startDate = DateTime.now();
   DateTime dueDate = DateTime.now().add(const Duration(days: 7));
 
@@ -55,24 +56,17 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     final assignment = widget.assignment;
 
     titleController = TextEditingController(text: assignment?.title ?? "");
-
     descriptionController = TextEditingController(
       text: assignment?.description ?? "",
     );
-
     courseController = TextEditingController(text: assignment?.course ?? "");
-
     notesController = TextEditingController(text: assignment?.notes ?? "");
-
     estimatedHoursController = TextEditingController(
       text: assignment?.estimatedHours.toString() ?? "1",
     );
 
-    isMultiDay = widget.assignment?.isMultiDay ?? true;
-
-    uploadedAttachments = List.from(widget.assignment?.attachments ?? []);
-
     if (assignment != null) {
+      isMultiDay = assignment.isMultiDay;
       type = assignment.type;
       priority = assignment.priority;
       status = assignment.status;
@@ -80,6 +74,45 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
       startDate = assignment.startDate.toDate();
       dueDate = assignment.dueDate.toDate();
+      selectedDate = startDate;
+    }
+
+    uploadedAttachments = List.from(widget.assignment?.attachments ?? []);
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    courseController.dispose();
+    notesController.dispose();
+    estimatedHoursController.dispose();
+    super.dispose();
+  }
+
+  Future<void> pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2100),
+      initialDate: selectedDate,
+    );
+
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+        if (!isMultiDay) {
+          // For single day, both start and due are the same
+          startDate = picked;
+          dueDate = picked;
+        } else {
+          // For multi-day, update start date
+          startDate = picked;
+          if (dueDate.isBefore(startDate)) {
+            dueDate = startDate.add(const Duration(days: 7));
+          }
+        }
+      });
     }
   }
 
@@ -94,6 +127,9 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     if (picked != null) {
       setState(() {
         startDate = picked;
+        if (dueDate.isBefore(startDate)) {
+          dueDate = startDate.add(const Duration(days: 7));
+        }
       });
     }
   }
@@ -113,6 +149,11 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     }
   }
 
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
   Future<void> submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -129,17 +170,11 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
         uploadedAttachments.add(
           AssignmentAttachment(
             id: DateTime.now().microsecondsSinceEpoch.toString(),
-
             fileName: file.path.split('/').last,
-
             fileUrl: url,
-
             fileType: file.path.split('.').last.toLowerCase(),
-
             fileSize: await file.length(),
-
             uploadedBy: widget.ownerId,
-
             uploadedAt: Timestamp.now(),
           ),
         );
@@ -157,8 +192,8 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       status: status,
       difficulty: difficulty,
       estimatedHours: double.tryParse(estimatedHoursController.text) ?? 1,
-      startDate: Timestamp.fromDate(isMultiDay ? startDate : dueDate),
-      dueDate: Timestamp.fromDate(dueDate),
+      startDate: Timestamp.fromDate(isMultiDay ? startDate : selectedDate),
+      dueDate: Timestamp.fromDate(isMultiDay ? dueDate : selectedDate),
       isMultiDay: isMultiDay,
       checklist: widget.assignment?.checklist ?? <AssignmentChecklistItem>[],
       tags: widget.assignment?.tags ?? <AssignmentTag>[],
@@ -178,34 +213,55 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
+          // Title Field
           TextFormField(
             controller: titleController,
-            decoration: const InputDecoration(labelText: "Title"),
+            decoration: const InputDecoration(
+              labelText: "Title",
+              border: OutlineInputBorder(),
+            ),
             validator: (v) => v == null || v.isEmpty ? "Required" : null,
           ),
 
           const SizedBox(height: 16),
 
+          // Description Field
           TextFormField(
             controller: descriptionController,
-            decoration: const InputDecoration(labelText: "Description"),
+            decoration: const InputDecoration(
+              labelText: "Description",
+              border: OutlineInputBorder(),
+            ),
             maxLines: 3,
           ),
 
           const SizedBox(height: 16),
 
+          // Course Field
           TextFormField(
             controller: courseController,
-            decoration: const InputDecoration(labelText: "Course"),
+            decoration: const InputDecoration(
+              labelText: "Course",
+              border: OutlineInputBorder(),
+            ),
           ),
 
           const SizedBox(height: 16),
 
+          // Type Dropdown
           DropdownButtonFormField<AssignmentType>(
             initialValue: type,
-            decoration: const InputDecoration(labelText: "Type"),
+            decoration: const InputDecoration(
+              labelText: "Type",
+              border: OutlineInputBorder(),
+            ),
             items: AssignmentType.values
-                .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_capitalize(e.name)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               setState(() {
@@ -216,11 +272,20 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 16),
 
+          // Priority Dropdown
           DropdownButtonFormField<AssignmentPriority>(
             initialValue: priority,
-            decoration: const InputDecoration(labelText: "Priority"),
+            decoration: const InputDecoration(
+              labelText: "Priority",
+              border: OutlineInputBorder(),
+            ),
             items: AssignmentPriority.values
-                .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_capitalize(e.name)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               setState(() {
@@ -231,11 +296,20 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 16),
 
+          // Status Dropdown
           DropdownButtonFormField<AssignmentStatus>(
             initialValue: status,
-            decoration: const InputDecoration(labelText: "Status"),
+            decoration: const InputDecoration(
+              labelText: "Status",
+              border: OutlineInputBorder(),
+            ),
             items: AssignmentStatus.values
-                .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_capitalize(e.name)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               setState(() {
@@ -246,11 +320,20 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 16),
 
+          // Difficulty Dropdown
           DropdownButtonFormField<AssignmentDifficulty>(
             initialValue: difficulty,
-            decoration: const InputDecoration(labelText: "Difficulty"),
+            decoration: const InputDecoration(
+              labelText: "Difficulty",
+              border: OutlineInputBorder(),
+            ),
             items: AssignmentDifficulty.values
-                .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_capitalize(e.name)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               setState(() {
@@ -261,54 +344,154 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 16),
 
+          // Estimated Hours
           TextFormField(
             controller: estimatedHoursController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: "Estimated Hours"),
+            decoration: const InputDecoration(
+              labelText: "Estimated Hours",
+              border: OutlineInputBorder(),
+            ),
           ),
 
           const SizedBox(height: 20),
 
+          // Multi-Day Toggle (Default: OFF)
           SwitchListTile(
-            title: const Text("Multi-Day Assignment"),
-            subtitle: const Text(
-              "Enable if this assignment spans multiple days.",
+            title: const Text(
+              "Multi-Day Assignment",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              isMultiDay
+                  ? "Enable start and end dates"
+                  : "Single day task (toggle to enable date range)",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             value: isMultiDay,
+            activeColor: Colors.blue,
             onChanged: (value) {
               setState(() {
                 isMultiDay = value;
+                if (!isMultiDay) {
+                  // When toggling off, set both dates to the same day
+                  dueDate = selectedDate;
+                  startDate = selectedDate;
+                } else {
+                  // When toggling on, set due date to start + 7 days
+                  if (startDate.isAtSameMomentAs(dueDate)) {
+                    dueDate = startDate.add(const Duration(days: 7));
+                  }
+                }
               });
             },
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          ListTile(
-            title: Text(
-              "Start : ${startDate.toLocal().toString().split(' ')[0]}",
+          // Date Picker Section
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: pickStartDate,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // If NOT multi-day: Show single date picker
+                  if (!isMultiDay)
+                    ListTile(
+                      title: Text(
+                        "Date: ${selectedDate.toLocal().toString().split(' ')[0]}",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      leading: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.blue,
+                      ),
+                      onTap: pickDate,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
+                    ),
+
+                  // If multi-day: Show both start and due dates
+                  if (isMultiDay) ...[
+                    ListTile(
+                      title: Text(
+                        "Start Date: ${startDate.toLocal().toString().split(' ')[0]}",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      leading: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.blue,
+                      ),
+                      onTap: pickStartDate,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
+                    ),
+                    const SizedBox(height: 8),
+                    ListTile(
+                      title: Text(
+                        "Due Date: ${dueDate.toLocal().toString().split(' ')[0]}",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      leading: const Icon(
+                        Icons.calendar_month,
+                        color: Colors.orange,
+                      ),
+                      onTap: pickDueDate,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
 
-          ListTile(
-            title: Text("Due : ${dueDate.toLocal().toString().split(' ')[0]}"),
-            trailing: const Icon(Icons.calendar_month),
-            onTap: pickDueDate,
-          ),
+          // Progress info for multi-day tasks
+          if (isMultiDay) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.timeline, size: 18, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Progress updates automatically based on time elapsed",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 20),
 
-          if (widget.assignment != null &&
-              widget.assignment!.attachments.isNotEmpty) ...[
+          // Current Attachments
+          if (uploadedAttachments.isNotEmpty) ...[
             const Text(
               "Current Attachments",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             const SizedBox(height: 10),
-
             ...uploadedAttachments.asMap().entries.map((entry) {
               final index = entry.key;
               final file = entry.value;
@@ -322,10 +505,10 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                 },
               );
             }),
-
             const SizedBox(height: 20),
           ],
 
+          // Attachment Picker
           AttachmentPicker(
             onChanged: (files) {
               selectedFiles = files;
@@ -334,18 +517,30 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 24),
 
+          // Notes Field
           TextFormField(
             controller: notesController,
             maxLines: 5,
-            decoration: const InputDecoration(labelText: "Notes"),
+            decoration: const InputDecoration(
+              labelText: "Notes",
+              border: OutlineInputBorder(),
+            ),
           ),
 
           const SizedBox(height: 30),
 
+          // Submit Button
           FilledButton(
             onPressed: submit,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: Text(
               widget.assignment == null ? "Create Assignment" : "Save Changes",
+              style: const TextStyle(fontSize: 16),
             ),
           ),
         ],

@@ -1,36 +1,33 @@
+import '../../data/models/assignment_model.dart';
+
 class AssignmentProgressService {
   const AssignmentProgressService();
 
-  int calculateProgress({
-    required DateTime now,
-    required DateTime startDate,
-    required DateTime dueDate,
-    required bool isMultiDay,
-  }) {
-    if (!isMultiDay) {
-      if (now.isBefore(dueDate)) {
-        return 0;
-      }
+  int calculateProgress(AssignmentModel assignment) {
+    if (!assignment.isMultiDay) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final due = assignment.dueDate.toDate();
+      final dueDate = DateTime(due.year, due.month, due.day);
 
+      if (today.isBefore(dueDate)) return 0;
       return 100;
     }
 
-    if (now.isBefore(startDate)) {
-      return 0;
-    }
+    final now = DateTime.now();
+    final start = assignment.startDate.toDate();
+    final end = assignment.dueDate.toDate();
 
-    if (now.isAfter(dueDate)) {
-      return 100;
-    }
+    if (now.isBefore(start)) return 0;
 
-    final total = dueDate.difference(startDate).inSeconds;
+    if (now.isAfter(end)) return 100;
 
-    if (total <= 0) {
-      return 100;
-    }
+    final totalDuration = end.difference(start).inMinutes;
+    final elapsedDuration = now.difference(start).inMinutes;
 
-    final elapsed = now.difference(startDate).inSeconds;
+    if (totalDuration == 0) return 0;
 
-    return ((elapsed / total) * 100).clamp(0, 100).round();
+    final progress = (elapsedDuration / totalDuration * 100).round();
+    return progress.clamp(0, 100);
   }
 }
