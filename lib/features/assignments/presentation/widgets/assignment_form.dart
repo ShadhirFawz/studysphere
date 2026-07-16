@@ -10,6 +10,7 @@ import '../../data/models/assignment_checklist_item.dart';
 import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_tag.dart';
 import 'assignment_attachment_card.dart';
+import '../widgets/tag_input_field.dart';
 
 class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
@@ -32,6 +33,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   List<File> selectedFiles = [];
 
   List<AssignmentAttachment> uploadedAttachments = [];
+  List<AssignmentTag> tags = [];
 
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
@@ -71,6 +73,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       priority = assignment.priority;
       status = assignment.status;
       difficulty = assignment.difficulty;
+      tags = List.from(assignment.tags);
 
       startDate = assignment.startDate.toDate();
       dueDate = assignment.dueDate.toDate();
@@ -192,11 +195,11 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       status: status,
       difficulty: difficulty,
       estimatedHours: double.tryParse(estimatedHoursController.text) ?? 1,
+      tags: tags,
       startDate: Timestamp.fromDate(isMultiDay ? startDate : selectedDate),
       dueDate: Timestamp.fromDate(isMultiDay ? dueDate : selectedDate),
       isMultiDay: isMultiDay,
       checklist: widget.assignment?.checklist ?? <AssignmentChecklistItem>[],
-      tags: widget.assignment?.tags ?? <AssignmentTag>[],
       notes: notesController.text.trim(),
       attachments: uploadedAttachments,
       createdAt: widget.assignment?.createdAt ?? now,
@@ -352,6 +355,18 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               labelText: "Estimated Hours",
               border: OutlineInputBorder(),
             ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tags Input
+          TagInputField(
+            tags: tags,
+            onTagsChanged: (updatedTags) {
+              setState(() {
+                tags = updatedTags;
+              });
+            },
           ),
 
           const SizedBox(height: 20),

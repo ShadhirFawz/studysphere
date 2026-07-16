@@ -16,6 +16,39 @@ class AssignmentCard extends ConsumerWidget {
   const AssignmentCard({super.key, required this.assignment});
 
   Future<void> _toggleCompleted(WidgetRef ref) async {
+    // Show confirmation dialog
+    final shouldComplete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          assignment.status == AssignmentStatus.completed
+              ? "Mark as Pending?"
+              : "Mark as Completed?",
+        ),
+        content: Text(
+          assignment.status == AssignmentStatus.completed
+              ? "This will move the assignment back to pending."
+              : "Great job! Confirm this assignment is complete.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              assignment.status == AssignmentStatus.completed
+                  ? "Mark Pending"
+                  : "Mark Complete",
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldComplete != true) return;
+
     final repo = ref.read(assignmentRepositoryProvider);
 
     final newStatus = assignment.status == AssignmentStatus.completed
@@ -25,6 +58,22 @@ class AssignmentCard extends ConsumerWidget {
     await repo.updateAssignment(
       assignment.copyWith(status: newStatus, updatedAt: Timestamp.now()),
     );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus == AssignmentStatus.completed
+                ? "Assignment marked as completed! 🎉"
+                : "Assignment moved back to pending.",
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: newStatus == AssignmentStatus.completed
+              ? Colors.green
+              : Colors.orange,
+        ),
+      );
+    }
   }
 
   Future<void> _delete(WidgetRef ref) async {
