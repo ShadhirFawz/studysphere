@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_scaffold.dart';
 
 import '../providers/assignment_provider.dart';
 import '../widgets/assignment_card.dart';
+import '../widgets/assignment_search_delegate.dart';
 
 class AssignmentScreen extends ConsumerWidget {
   const AssignmentScreen({super.key});
@@ -18,7 +19,20 @@ class AssignmentScreen extends ConsumerWidget {
     final assignmentsAsync = ref.watch(assignmentsProvider);
 
     return AppScaffold(
+      centerTitle: true,
       title: "Assignments",
+
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            showSearch(
+              context: context,
+              delegate: AssignmentSearchDelegate(ref),
+            );
+          },
+        ),
+      ],
 
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/add-assignment'),

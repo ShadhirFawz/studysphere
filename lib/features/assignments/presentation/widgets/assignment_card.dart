@@ -15,7 +15,7 @@ class AssignmentCard extends ConsumerWidget {
 
   const AssignmentCard({super.key, required this.assignment});
 
-  Future<void> _toggleCompleted(WidgetRef ref) async {
+  Future<void> _toggleCompleted(BuildContext context, WidgetRef ref) async {
     // Show confirmation dialog
     final shouldComplete = await showDialog<bool>(
       context: context,
@@ -224,7 +224,7 @@ class AssignmentCard extends ConsumerWidget {
                         color: isCompleted ? Colors.green : Colors.grey,
                         size: 22,
                       ),
-                      onPressed: () => _toggleCompleted(ref),
+                      onPressed: () => _toggleCompleted(context, ref),
                     ),
                   ],
                 ),
