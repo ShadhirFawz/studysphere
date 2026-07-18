@@ -4,6 +4,8 @@ import '../../data/models/assignment_model.dart';
 import 'assignment_provider.dart';
 
 class AssignmentFilterState {
+  static const Object _unset = Object();
+
   final String? searchQuery;
   final List<AssignmentPriority> priorities;
   final List<AssignmentStatus> statuses;
@@ -31,7 +33,7 @@ class AssignmentFilterState {
     List<String>? courses,
     List<AssignmentType>? types,
     List<AssignmentDifficulty>? difficulties,
-    String? sortBy,
+    Object? sortBy = _unset,
     bool? sortAscending,
   }) {
     return AssignmentFilterState(
@@ -41,7 +43,7 @@ class AssignmentFilterState {
       courses: courses ?? this.courses,
       types: types ?? this.types,
       difficulties: difficulties ?? this.difficulties,
-      sortBy: sortBy ?? this.sortBy,
+      sortBy: identical(sortBy, _unset) ? this.sortBy : sortBy as String?,
       sortAscending: sortAscending ?? this.sortAscending,
     );
   }

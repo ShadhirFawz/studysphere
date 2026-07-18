@@ -277,7 +277,8 @@ class _AssignmentFilterSheetState extends ConsumerState<AssignmentFilterSheet> {
   }
 
   Widget _buildSortSection() {
-    final sortOptions = [
+    final sortOptions = <String?>[
+      null,
       'title',
       'dueDate',
       'priority',
@@ -297,18 +298,29 @@ class _AssignmentFilterSheetState extends ConsumerState<AssignmentFilterSheet> {
         Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<String>(
+              child: DropdownButtonFormField<String?>(
                 value: filter.sortBy,
-                hint: const Text('Select sort option'),
+                hint: const Text('Default'),
                 items: sortOptions.map((option) {
-                  return DropdownMenuItem(
+                  return DropdownMenuItem<String?>(
                     value: option,
-                    child: Text(option[0].toUpperCase() + option.substring(1)),
+                    child: Text(
+                      option == null
+                          ? 'Default'
+                          : option[0].toUpperCase() + option.substring(1),
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    filter = filter.copyWith(sortBy: value);
+                    if (value == null) {
+                      filter = filter.copyWith(
+                        sortBy: null,
+                        sortAscending: true,
+                      );
+                    } else {
+                      filter = filter.copyWith(sortBy: value);
+                    }
                     ref.read(assignmentFilterProvider.notifier).state = filter;
                   });
                 },
@@ -326,16 +338,19 @@ class _AssignmentFilterSheetState extends ConsumerState<AssignmentFilterSheet> {
                 filter.sortAscending
                     ? Icons.arrow_upward
                     : Icons.arrow_downward,
-                color: Colors.blue,
+                color: filter.sortBy == null ? Colors.grey : Colors.blue,
               ),
-              onPressed: () {
-                setState(() {
-                  filter = filter.copyWith(
-                    sortAscending: !filter.sortAscending,
-                  );
-                  ref.read(assignmentFilterProvider.notifier).state = filter;
-                });
-              },
+              onPressed: filter.sortBy == null
+                  ? null
+                  : () {
+                      setState(() {
+                        filter = filter.copyWith(
+                          sortAscending: !filter.sortAscending,
+                        );
+                        ref.read(assignmentFilterProvider.notifier).state =
+                            filter;
+                      });
+                    },
               tooltip: filter.sortAscending ? 'Ascending' : 'Descending',
             ),
           ],

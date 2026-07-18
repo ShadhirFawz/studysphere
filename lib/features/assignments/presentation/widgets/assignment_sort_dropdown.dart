@@ -10,8 +10,8 @@ class AssignmentSortDropdown extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(assignmentFilterProvider);
 
-    final sortOptions = [
-      'none', // Default option to clear sorting
+    final sortOptions = <String?>[
+      null,
       'title',
       'dueDate',
       'priority',
@@ -30,10 +30,10 @@ class AssignmentSortDropdown extends ConsumerWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<String?>(
               value: filter.sortBy,
               hint: Text(
-                'Sort',
+                'Default',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               isDense: true,
@@ -41,31 +41,28 @@ class AssignmentSortDropdown extends ConsumerWidget {
               style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
               dropdownColor: Colors.white,
               items: sortOptions.map((option) {
-                final displayName = option == 'none'
-                    ? 'None'
+                final displayName = option == null
+                    ? 'Default'
                     : option[0].toUpperCase() + option.substring(1);
 
-                return DropdownMenuItem<String>(
+                return DropdownMenuItem<String?>(
                   value: option,
                   child: Text(
                     displayName,
                     style: TextStyle(
                       fontSize: 12,
-                      color: option == 'none'
-                          ? Colors.grey.shade500
-                          : Colors.grey.shade800,
-                      fontWeight: option == 'none'
-                          ? FontWeight.normal
+                      color: Colors.grey.shade800,
+                      fontWeight: option == null
+                          ? FontWeight.w600
                           : FontWeight.w500,
                     ),
                   ),
                 );
               }).toList(),
               onChanged: (value) {
-                if (value == 'none') {
-                  // Clear sorting by setting sortBy to null
+                if (value == null) {
                   ref.read(assignmentFilterProvider.notifier).state = filter
-                      .copyWith(sortBy: null);
+                      .copyWith(sortBy: null, sortAscending: true);
                 } else {
                   ref.read(assignmentFilterProvider.notifier).state = filter
                       .copyWith(sortBy: value);
@@ -87,7 +84,7 @@ class AssignmentSortDropdown extends ConsumerWidget {
             color: filter.sortBy == null ? Colors.grey.shade400 : Colors.blue,
           ),
           onPressed: filter.sortBy == null
-              ? null // Disable if no sort is selected
+              ? null
               : () {
                   ref.read(assignmentFilterProvider.notifier).state = filter
                       .copyWith(sortAscending: !filter.sortAscending);
