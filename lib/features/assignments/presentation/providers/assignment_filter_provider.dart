@@ -113,8 +113,9 @@ class AssignmentFilterState {
           .toList();
     }
 
-    // Apply sorting
-    if (sortBy != null) {
+    if (sortBy == null) {
+      filtered.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    } else {
       switch (sortBy) {
         case 'title':
           filtered.sort((a, b) => a.title.compareTo(b.title));

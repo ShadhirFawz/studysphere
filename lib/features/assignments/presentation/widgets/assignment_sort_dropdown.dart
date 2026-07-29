@@ -90,6 +90,8 @@ class AssignmentSortDropdown extends ConsumerWidget {
                       .copyWith(sortAscending: !filter.sortAscending);
                 },
           tooltip: filter.sortAscending ? 'Ascending' : 'Descending',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
         ),
       ],
     );
