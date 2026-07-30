@@ -16,7 +16,6 @@ class AssignmentCard extends ConsumerWidget {
   const AssignmentCard({super.key, required this.assignment});
 
   Future<void> _toggleCompleted(BuildContext context, WidgetRef ref) async {
-    // Show confirmation dialog
     final shouldComplete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -172,7 +171,8 @@ class AssignmentCard extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: InkWell(
           onTap: () {
-            context.push('/edit-assignment', extra: assignment);
+            // Navigate to detail screen instead of edit
+            context.push('/assignment-detail', extra: assignment);
           },
           borderRadius: BorderRadius.circular(10),
           child: Padding(
@@ -213,7 +213,7 @@ class AssignmentCard extends ConsumerWidget {
                       ),
                     ),
 
-                    // Check button (smaller)
+                    // Check button
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -226,10 +226,48 @@ class AssignmentCard extends ConsumerWidget {
                       ),
                       onPressed: () => _toggleCompleted(context, ref),
                     ),
+
+                    // Popup Menu Button
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          context.push('/edit-assignment', extra: assignment);
+                        } else if (value == 'select') {
+                          // Selection logic will be added later
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Selection mode coming soon!'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 18),
+                              SizedBox(width: 8),
+                              Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'select',
+                          child: Row(
+                            children: [
+                              Icon(Icons.checklist, size: 18),
+                              SizedBox(width: 8),
+                              Text('Select'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-
-                const SizedBox(height: 6),
 
                 Row(
                   children: [
@@ -302,7 +340,6 @@ class AssignmentCard extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // Difficulty badge (compact)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
