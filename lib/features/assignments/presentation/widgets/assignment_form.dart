@@ -11,6 +11,7 @@ import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_tag.dart';
 import 'assignment_attachment_card.dart';
 import '../widgets/tag_input_field.dart';
+import '../widgets/checklist_section.dart'; // NEW
 
 class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
@@ -34,6 +35,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
   List<AssignmentAttachment> uploadedAttachments = [];
   List<AssignmentTag> tags = [];
+  List<AssignmentChecklistItem> checklist = []; // NEW
 
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
@@ -46,7 +48,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   AssignmentStatus status = AssignmentStatus.pending;
   AssignmentDifficulty difficulty = AssignmentDifficulty.medium;
 
-  bool isMultiDay = false; // Default: disabled (single day)
+  bool isMultiDay = false;
   DateTime selectedDate = DateTime.now();
   DateTime startDate = DateTime.now();
   DateTime dueDate = DateTime.now().add(const Duration(days: 7));
@@ -74,6 +76,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       status = assignment.status;
       difficulty = assignment.difficulty;
       tags = List.from(assignment.tags);
+      checklist = List.from(assignment.checklist); // NEW
 
       startDate = assignment.startDate.toDate();
       dueDate = assignment.dueDate.toDate();
@@ -105,11 +108,9 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       setState(() {
         selectedDate = picked;
         if (!isMultiDay) {
-          // For single day, both start and due are the same
           startDate = picked;
           dueDate = picked;
         } else {
-          // For multi-day, update start date
           startDate = picked;
           if (dueDate.isBefore(startDate)) {
             dueDate = startDate.add(const Duration(days: 7));
@@ -196,10 +197,10 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       difficulty: difficulty,
       estimatedHours: double.tryParse(estimatedHoursController.text) ?? 1,
       tags: tags,
+      checklist: checklist, // NEW: Use the checklist state
       startDate: Timestamp.fromDate(isMultiDay ? startDate : selectedDate),
       dueDate: Timestamp.fromDate(isMultiDay ? dueDate : selectedDate),
       isMultiDay: isMultiDay,
-      checklist: widget.assignment?.checklist ?? <AssignmentChecklistItem>[],
       notes: notesController.text.trim(),
       attachments: uploadedAttachments,
       createdAt: widget.assignment?.createdAt ?? now,
@@ -371,7 +372,18 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 20),
 
-          // Multi-Day Toggle (Default: OFF)
+          ChecklistSection(
+            items: checklist,
+            onChanged: (updatedChecklist) {
+              setState(() {
+                checklist = updatedChecklist;
+              });
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          // Multi-Day Toggle
           SwitchListTile(
             title: const Text(
               "Multi-Day Assignment",
@@ -389,11 +401,9 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               setState(() {
                 isMultiDay = value;
                 if (!isMultiDay) {
-                  // When toggling off, set both dates to the same day
                   dueDate = selectedDate;
                   startDate = selectedDate;
                 } else {
-                  // When toggling on, set due date to start + 7 days
                   if (startDate.isAtSameMomentAs(dueDate)) {
                     dueDate = startDate.add(const Duration(days: 7));
                   }
@@ -414,7 +424,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // If NOT multi-day: Show single date picker
                   if (!isMultiDay)
                     ListTile(
                       title: Text(
@@ -432,7 +441,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                       tileColor: Colors.grey.shade50,
                     ),
 
-                  // If multi-day: Show both start and due dates
                   if (isMultiDay) ...[
                     ListTile(
                       title: Text(
