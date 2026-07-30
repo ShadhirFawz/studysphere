@@ -2,208 +2,319 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../data/models/assignment_model.dart';
+import '../../data/models/assignment_checklist_item.dart';
+import '../providers/assignment_provider.dart';
 import '../providers/assignment_progress_provider.dart';
 import '../widgets/priority_chip.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/assignment_attachment_card.dart';
 
-class AssignmentDetailScreen extends ConsumerWidget {
+class AssignmentDetailScreen extends ConsumerStatefulWidget {
   final AssignmentModel assignment;
 
   const AssignmentDetailScreen({super.key, required this.assignment});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final progressService = ref.watch(assignmentProgressProvider);
+  ConsumerState<AssignmentDetailScreen> createState() =>
+      _AssignmentDetailScreenState();
+}
 
-    final progress = progressService.calculateProgress(assignment);
+class _AssignmentDetailScreenState
+    extends ConsumerState<AssignmentDetailScreen> {
+  late AssignmentModel _assignment;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _assignment = widget.assignment;
+  }
+
+  Future<void> _toggleChecklistItem(AssignmentChecklistItem item) async {
+    // Show confirmation dialog
+    final shouldComplete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          item.completed ? "Mark as Incomplete?" : "Mark as Completed?",
+        ),
+        content: Text(
+          item.completed
+              ? 'Are you sure you want to mark "${item.title}" as incomplete?'
+              : 'Are you sure you want to mark "${item.title}" as completed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(item.completed ? "Mark Incomplete" : "Mark Complete"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldComplete != true) return;
+
+    setState(() => _isUpdating = true);
+
+    try {
+      // Update the checklist item locally
+      final updatedChecklist = _assignment.checklist.map((e) {
+        if (e.id == item.id) {
+          return e.copyWith(completed: !e.completed);
+        }
+        return e;
+      }).toList();
+
+      // Update the assignment with new checklist
+      final updatedAssignment = _assignment.copyWith(
+        checklist: updatedChecklist,
+        updatedAt: Timestamp.now(),
+      );
+
+      // Save to Firestore
+      final repo = ref.read(assignmentRepositoryProvider);
+      await repo.updateAssignment(updatedAssignment);
+
+      // Update local state
+      setState(() {
+        _assignment = updatedAssignment;
+        _isUpdating = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              item.completed
+                  ? 'Item marked as incomplete'
+                  : 'Item marked as completed! 🎉',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: item.completed ? Colors.orange : Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUpdating = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progressService = ref.watch(assignmentProgressProvider);
+    final progress = progressService.calculateProgress(_assignment);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(assignment.title),
+        title: Text(_assignment.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              context.push('/edit-assignment', extra: assignment);
+              context.push('/edit-assignment', extra: _assignment);
             },
             tooltip: 'Edit Assignment',
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            _buildHeader(context, progress),
-            const SizedBox(height: 16),
+      body: _isUpdating
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  _buildHeader(context, progress),
+                  const SizedBox(height: 16),
 
-            // Course Info
-            _buildInfoRow(
-              icon: Icons.school,
-              label: 'Course',
-              value: assignment.course,
+                  // Course Info
+                  _buildInfoRow(
+                    icon: Icons.school,
+                    label: 'Course',
+                    value: _assignment.course,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Type & Difficulty
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoRow(
+                          icon: Icons.category,
+                          label: 'Type',
+                          value: _capitalize(_assignment.type.name),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildInfoRow(
+                          icon: Icons.speed,
+                          label: 'Difficulty',
+                          value: _capitalize(_assignment.difficulty.name),
+                          valueColor: _getDifficultyColor(
+                            _assignment.difficulty,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Priority & Status
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildChipRow(
+                          icon: Icons.flag,
+                          label: 'Priority',
+                          widget: PriorityChip(priority: _assignment.priority),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildChipRow(
+                          icon: Icons.task_alt,
+                          label: 'Status',
+                          widget: StatusChip(status: _assignment.status),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Due Date & Estimated Hours
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoRow(
+                          icon: Icons.calendar_today,
+                          label: 'Due Date',
+                          value: DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(_assignment.dueDate.toDate()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildInfoRow(
+                          icon: Icons.access_time,
+                          label: 'Est. Hours',
+                          value:
+                              '${_assignment.estimatedHours.toStringAsFixed(1)}h',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Multi-Day Info
+                  if (_assignment.isMultiDay)
+                    _buildInfoRow(
+                      icon: Icons.date_range,
+                      label: 'Start Date',
+                      value: DateFormat(
+                        'MMM dd, yyyy',
+                      ).format(_assignment.startDate.toDate()),
+                    ),
+                  const SizedBox(height: 16),
+
+                  // Progress Section
+                  _buildProgressSection(progress),
+                  const SizedBox(height: 20),
+
+                  // Description
+                  if (_assignment.description.isNotEmpty) ...[
+                    const Text(
+                      'Description',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _assignment.description,
+                        style: const TextStyle(height: 1.5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Checklist Section (Interactive)
+                  if (_assignment.checklist.isNotEmpty) ...[
+                    _buildChecklistSection(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Tags Section
+                  if (_assignment.tags.isNotEmpty) ...[
+                    _buildTagsSection(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Attachments Section
+                  if (_assignment.attachments.isNotEmpty) ...[
+                    _buildAttachmentsSection(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Notes Section
+                  if (_assignment.notes.isNotEmpty) ...[
+                    const Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _assignment.notes,
+                        style: const TextStyle(height: 1.5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Created/Updated Info
+                  _buildMetadataSection(),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-
-            // Type & Difficulty
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoRow(
-                    icon: Icons.category,
-                    label: 'Type',
-                    value: _capitalize(assignment.type.name),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildInfoRow(
-                    icon: Icons.speed,
-                    label: 'Difficulty',
-                    value: _capitalize(assignment.difficulty.name),
-                    valueColor: _getDifficultyColor(assignment.difficulty),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Priority & Status
-            Row(
-              children: [
-                Expanded(
-                  child: _buildChipRow(
-                    icon: Icons.flag,
-                    label: 'Priority',
-                    widget: PriorityChip(priority: assignment.priority),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildChipRow(
-                    icon: Icons.task_alt,
-                    label: 'Status',
-                    widget: StatusChip(status: assignment.status),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Due Date & Estimated Hours
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoRow(
-                    icon: Icons.calendar_today,
-                    label: 'Due Date',
-                    value: DateFormat(
-                      'MMM dd, yyyy',
-                    ).format(assignment.dueDate.toDate()),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildInfoRow(
-                    icon: Icons.access_time,
-                    label: 'Est. Hours',
-                    value: '${assignment.estimatedHours.toStringAsFixed(1)}h',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Multi-Day Info
-            if (assignment.isMultiDay)
-              _buildInfoRow(
-                icon: Icons.date_range,
-                label: 'Start Date',
-                value: DateFormat(
-                  'MMM dd, yyyy',
-                ).format(assignment.startDate.toDate()),
-              ),
-            const SizedBox(height: 16),
-
-            // Progress Section
-            _buildProgressSection(progress),
-            const SizedBox(height: 20),
-
-            // Description
-            if (assignment.description.isNotEmpty) ...[
-              const Text(
-                'Description',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  assignment.description,
-                  style: const TextStyle(height: 1.5),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Checklist Section
-            if (assignment.checklist.isNotEmpty) ...[
-              _buildChecklistSection(),
-              const SizedBox(height: 16),
-            ],
-
-            // Tags Section
-            if (assignment.tags.isNotEmpty) ...[
-              _buildTagsSection(),
-              const SizedBox(height: 16),
-            ],
-
-            // Attachments Section
-            if (assignment.attachments.isNotEmpty) ...[
-              _buildAttachmentsSection(),
-              const SizedBox(height: 16),
-            ],
-
-            // Notes Section
-            if (assignment.notes.isNotEmpty) ...[
-              const Text(
-                'Notes',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  assignment.notes,
-                  style: const TextStyle(height: 1.5),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Created/Updated Info
-            _buildMetadataSection(),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildHeader(BuildContext context, int progress) {
-    final isCompleted = assignment.status == AssignmentStatus.completed;
+    final isCompleted = _assignment.status == AssignmentStatus.completed;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -239,7 +350,7 @@ class AssignmentDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      assignment.title,
+                      _assignment.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -372,8 +483,7 @@ class AssignmentDetailScreen extends ConsumerWidget {
             minHeight: 6,
           ),
           const SizedBox(height: 8),
-          // Show additional info based on assignment type
-          if (assignment.isMultiDay) ...[
+          if (_assignment.isMultiDay) ...[
             Row(
               children: [
                 Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
@@ -402,10 +512,10 @@ class AssignmentDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildChecklistSection() {
-    final completed = assignment.checklist
+    final completed = _assignment.checklist
         .where((item) => item.completed)
         .length;
-    final total = assignment.checklist.length;
+    final total = _assignment.checklist.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,19 +547,22 @@ class AssignmentDetailScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
-            children: assignment.checklist.map((item) {
+            children: _assignment.checklist.map((item) {
               return ListTile(
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 0,
                 ),
-                leading: Icon(
-                  item.completed
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: item.completed ? Colors.green : Colors.grey.shade400,
-                  size: 20,
+                leading: GestureDetector(
+                  onTap: () => _toggleChecklistItem(item),
+                  child: Icon(
+                    item.completed
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: item.completed ? Colors.green : Colors.grey.shade400,
+                    size: 22,
+                  ),
                 ),
                 title: Text(
                   item.title,
@@ -462,11 +575,62 @@ class AssignmentDetailScreen extends ConsumerWidget {
                         : Colors.black87,
                   ),
                 ),
+                trailing: IconButton(
+                  icon: Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: Colors.grey.shade400,
+                  ),
+                  onPressed: () {
+                    _showItemDetailDialog(item);
+                  },
+                  tooltip: 'View details',
+                ),
               );
             }).toList(),
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showItemDetailDialog(AssignmentChecklistItem item) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(item.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Status: ${item.completed ? "✅ Completed" : "⏳ Pending"}',
+              style: TextStyle(
+                color: item.completed ? Colors.green : Colors.orange,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ID: ${item.id.substring(0, 8)}...',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _toggleChecklistItem(item);
+            },
+            child: Text(item.completed ? 'Mark Incomplete' : 'Mark Complete'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -482,7 +646,7 @@ class AssignmentDetailScreen extends ConsumerWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: assignment.tags.map((tag) {
+          children: _assignment.tags.map((tag) {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -513,7 +677,7 @@ class AssignmentDetailScreen extends ConsumerWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        ...assignment.attachments.map((attachment) {
+        ..._assignment.attachments.map((attachment) {
           return AssignmentAttachmentCard(attachment: attachment);
         }),
       ],
@@ -528,11 +692,11 @@ class AssignmentDetailScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Created: ${DateFormat('MMM dd, yyyy • h:mm a').format(assignment.createdAt.toDate())}',
+              'Created: ${DateFormat('MMM dd, yyyy • h:mm a').format(_assignment.createdAt.toDate())}',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
             ),
             Text(
-              'Updated: ${DateFormat('MMM dd, yyyy • h:mm a').format(assignment.updatedAt.toDate())}',
+              'Updated: ${DateFormat('MMM dd, yyyy • h:mm a').format(_assignment.updatedAt.toDate())}',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
             ),
           ],
