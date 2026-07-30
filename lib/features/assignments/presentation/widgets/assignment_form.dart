@@ -11,18 +11,20 @@ import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_tag.dart';
 import 'assignment_attachment_card.dart';
 import '../widgets/tag_input_field.dart';
-import '../widgets/checklist_section.dart'; // NEW
+import '../widgets/checklist_section.dart';
 
 class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
   final Function(AssignmentModel) onSubmit;
   final String ownerId;
+  final bool isLoading; // NEW: Loading state
 
   const AssignmentForm({
     super.key,
     required this.ownerId,
     required this.onSubmit,
     this.assignment,
+    this.isLoading = false, // NEW: Default to false
   });
 
   @override
@@ -35,7 +37,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
   List<AssignmentAttachment> uploadedAttachments = [];
   List<AssignmentTag> tags = [];
-  List<AssignmentChecklistItem> checklist = []; // NEW
+  List<AssignmentChecklistItem> checklist = [];
 
   late final TextEditingController titleController;
   late final TextEditingController descriptionController;
@@ -76,7 +78,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       status = assignment.status;
       difficulty = assignment.difficulty;
       tags = List.from(assignment.tags);
-      checklist = List.from(assignment.checklist); // NEW
+      checklist = List.from(assignment.checklist);
 
       startDate = assignment.startDate.toDate();
       dueDate = assignment.dueDate.toDate();
@@ -197,7 +199,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       difficulty: difficulty,
       estimatedHours: double.tryParse(estimatedHoursController.text) ?? 1,
       tags: tags,
-      checklist: checklist, // NEW: Use the checklist state
+      checklist: checklist,
       startDate: Timestamp.fromDate(isMultiDay ? startDate : selectedDate),
       dueDate: Timestamp.fromDate(isMultiDay ? dueDate : selectedDate),
       isMultiDay: isMultiDay,
@@ -212,6 +214,9 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.assignment != null;
+    final isLoading = widget.isLoading;
+
     return Form(
       key: _formKey,
       child: ListView(
@@ -372,6 +377,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           const SizedBox(height: 20),
 
+          // Checklist Section
           ChecklistSection(
             items: checklist,
             onChanged: (updatedChecklist) {
@@ -554,17 +560,33 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
 
           // Submit Button
           FilledButton(
-            onPressed: submit,
+            onPressed: isLoading ? null : submit,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: Text(
-              widget.assignment == null ? "Create Assignment" : "Save Changes",
-              style: const TextStyle(fontSize: 16),
-            ),
+            child: isLoading
+                ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Saving...'),
+                    ],
+                  )
+                : Text(
+                    isEditing ? "Save Changes" : "Create Assignment",
+                    style: const TextStyle(fontSize: 16),
+                  ),
           ),
         ],
       ),
