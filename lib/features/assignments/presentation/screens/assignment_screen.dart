@@ -9,46 +9,131 @@ import '../../../../core/widgets/app_scaffold.dart';
 
 import '../providers/assignment_provider.dart';
 import '../providers/assignment_filter_provider.dart';
+import '../providers/assignment_selection_provider.dart';
 import '../widgets/assignment_card.dart';
 import '../widgets/assignment_filter_chip.dart';
 import '../widgets/assignment_search_delegate.dart';
 import '../widgets/assignment_sort_dropdown.dart';
+import '../widgets/bulk_action_bar.dart';
 
 class AssignmentScreen extends ConsumerWidget {
   const AssignmentScreen({super.key});
+
+  Future<void> _deleteSelectedAssignments(
+    BuildContext context,
+    WidgetRef ref,
+    Set<String> selectedIds,
+  ) async {
+    if (selectedIds.isEmpty) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Selected Assignments?'),
+        content: Text(
+          'Are you sure you want to delete ${selectedIds.length} selected assignment(s)? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    final repo = ref.read(assignmentRepositoryProvider);
+    int deletedCount = 0;
+    int failedCount = 0;
+
+    for (final id in selectedIds) {
+      try {
+        await repo.deleteAssignment(id);
+        deletedCount++;
+      } catch (e) {
+        failedCount++;
+      }
+    }
+
+    // Clear selection after deletion
+    ref.read(assignmentSelectionProvider.notifier).state = {};
+    ref.read(isSelectionModeProvider.notifier).state = false;
+
+    if (context.mounted) {
+      String message;
+      if (failedCount == 0) {
+        message = 'Successfully deleted $deletedCount assignment(s)';
+      } else {
+        message = 'Deleted $deletedCount assignment(s), $failedCount failed';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: failedCount == 0 ? Colors.green : Colors.orange,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final assignmentsAsync = ref.watch(assignmentsProvider);
     final filterState = ref.watch(assignmentFilterProvider);
+    final isSelectionMode = ref.watch(isSelectionModeProvider);
+    final selectedIds = ref.watch(assignmentSelectionProvider);
 
     return AppScaffold(
       centerTitle: true,
-      title: "Assignments",
-      // Removed filter from actions - only search remains
+      title: isSelectionMode ? "Select Assignments" : "Assignments",
       actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {
-            showSearch(
-              context: context,
-              delegate: AssignmentSearchDelegate(ref),
-            );
-          },
-        ),
+        // Hide search and FAB in selection mode
+        if (!isSelectionMode) ...[
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: AssignmentSearchDelegate(ref),
+              );
+            },
+          ),
+        ],
       ],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/add-assignment'),
-        child: const Icon(Icons.assignment_add),
-      ),
+      floatingActionButton: isSelectionMode
+          ? null
+          : FloatingActionButton(
+              onPressed: () => context.push('/add-assignment'),
+              child: const Icon(Icons.assignment_add),
+            ),
       body: Column(
         children: [
-          // Filter & Sort Bar (only show when there are assignments)
-          if (assignmentsAsync.when(
-            data: (assignments) => assignments.isNotEmpty,
-            loading: () => false,
-            error: (_, __) => false,
-          ))
+          // Bulk Action Bar
+          if (isSelectionMode)
+            BulkActionBar(
+              onDeleteSelected: () =>
+                  _deleteSelectedAssignments(context, ref, selectedIds),
+              onCancelSelection: () {
+                ref.read(assignmentSelectionProvider.notifier).state = {};
+                ref.read(isSelectionModeProvider.notifier).state = false;
+              },
+            ),
+
+          // Filter & Sort Bar
+          if (!isSelectionMode &&
+              assignmentsAsync.when(
+                data: (assignments) => assignments.isNotEmpty,
+                loading: () => false,
+                error: (_, __) => false,
+              ))
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(

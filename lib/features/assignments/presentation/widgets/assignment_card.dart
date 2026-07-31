@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/models/assignment_model.dart';
 import '../providers/assignment_provider.dart';
+import '../providers/assignment_selection_provider.dart';
 
 import 'priority_chip.dart';
 import 'status_chip.dart';
@@ -112,6 +113,24 @@ class AssignmentCard extends ConsumerWidget {
     return DateFormat('MMM dd').format(timestamp.toDate());
   }
 
+  void _toggleSelection(WidgetRef ref) {
+    final selectedIds = ref.read(assignmentSelectionProvider);
+    final isSelected = selectedIds.contains(assignment.id);
+
+    ref.read(assignmentSelectionProvider.notifier).state = isSelected
+        ? selectedIds.where((id) => id != assignment.id).toSet()
+        : {...selectedIds, assignment.id};
+
+    // Update selection mode
+    final isSelectionMode = ref.read(isSelectionModeProvider);
+    if (!isSelectionMode && ref.read(assignmentSelectionProvider).isNotEmpty) {
+      ref.read(isSelectionModeProvider.notifier).state = true;
+    }
+    if (ref.read(assignmentSelectionProvider).isEmpty) {
+      ref.read(isSelectionModeProvider.notifier).state = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isCompleted = assignment.status == AssignmentStatus.completed;
@@ -121,9 +140,15 @@ class AssignmentCard extends ConsumerWidget {
         .read(assignmentRepositoryProvider)
         .getAssignmentProgress(assignment);
 
+    final isSelectionMode = ref.watch(isSelectionModeProvider);
+    final selectedIds = ref.watch(assignmentSelectionProvider);
+    final isSelected = selectedIds.contains(assignment.id);
+
     return Dismissible(
       key: ValueKey(assignment.id),
-      direction: DismissDirection.endToStart,
+      direction: isSelectionMode
+          ? DismissDirection.none
+          : DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 10),
@@ -134,6 +159,7 @@ class AssignmentCard extends ConsumerWidget {
         child: const Icon(Icons.delete, color: Colors.white, size: 32),
       ),
       confirmDismiss: (_) async {
+        if (isSelectionMode) return false;
         return await showDialog<bool>(
               context: context,
               builder: (dialogContext) {
@@ -156,6 +182,7 @@ class AssignmentCard extends ConsumerWidget {
             false;
       },
       onDismissed: (_) async {
+        if (isSelectionMode) return;
         await _delete(ref);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -171,8 +198,11 @@ class AssignmentCard extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: InkWell(
           onTap: () {
-            // Navigate to detail screen instead of edit
-            context.push('/assignment-detail', extra: assignment);
+            if (isSelectionMode) {
+              _toggleSelection(ref);
+            } else {
+              context.push('/assignment-detail', extra: assignment);
+            }
           },
           borderRadius: BorderRadius.circular(10),
           child: Padding(
@@ -182,6 +212,22 @@ class AssignmentCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
+                    // Selection checkbox (visible only in selection mode)
+                    if (isSelectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Checkbox(
+                          value: isSelected,
+                          onChanged: (_) => _toggleSelection(ref),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
@@ -213,61 +259,62 @@ class AssignmentCard extends ConsumerWidget {
                       ),
                     ),
 
-                    // Check button
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        isCompleted
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: isCompleted ? Colors.green : Colors.grey,
-                        size: 22,
+                    // Check button (hidden in selection mode)
+                    if (!isSelectionMode)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          isCompleted
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          color: isCompleted ? Colors.green : Colors.grey,
+                          size: 22,
+                        ),
+                        onPressed: () => _toggleCompleted(context, ref),
                       ),
-                      onPressed: () => _toggleCompleted(context, ref),
-                    ),
 
                     // Popup Menu Button
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, size: 20),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          context.push('/edit-assignment', extra: assignment);
-                        } else if (value == 'select') {
-                          // Selection logic will be added later
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Selection mode coming soon!'),
-                              behavior: SnackBarBehavior.floating,
+                    if (!isSelectionMode)
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, size: 20),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            context.push('/edit-assignment', extra: assignment);
+                          } else if (value == 'select') {
+                            // Enable selection mode and select this card
+                            ref.read(isSelectionModeProvider.notifier).state =
+                                true;
+                            _toggleSelection(ref);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 18),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
                             ),
-                          );
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, size: 18),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
                           ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'select',
-                          child: Row(
-                            children: [
-                              Icon(Icons.checklist, size: 18),
-                              SizedBox(width: 8),
-                              Text('Select'),
-                            ],
+                          const PopupMenuItem(
+                            value: 'select',
+                            child: Row(
+                              children: [
+                                Icon(Icons.checklist, size: 18),
+                                SizedBox(width: 8),
+                                Text('Select'),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
+
+                const SizedBox(height: 6),
 
                 Row(
                   children: [
