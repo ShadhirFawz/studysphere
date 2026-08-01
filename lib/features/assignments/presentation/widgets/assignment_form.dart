@@ -12,19 +12,20 @@ import '../../data/models/assignment_tag.dart';
 import 'assignment_attachment_card.dart';
 import '../widgets/tag_input_field.dart';
 import '../widgets/checklist_section.dart';
+import '../widgets/upload_progress_dialog.dart';
 
 class AssignmentForm extends ConsumerStatefulWidget {
   final AssignmentModel? assignment;
   final Function(AssignmentModel) onSubmit;
   final String ownerId;
-  final bool isLoading; // NEW: Loading state
+  final bool isLoading;
 
   const AssignmentForm({
     super.key,
     required this.ownerId,
     required this.onSubmit,
     this.assignment,
-    this.isLoading = false, // NEW: Default to false
+    this.isLoading = false,
   });
 
   @override
@@ -54,6 +55,9 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   DateTime selectedDate = DateTime.now();
   DateTime startDate = DateTime.now();
   DateTime dueDate = DateTime.now().add(const Duration(days: 7));
+
+  bool _isUploading = false; // NEW
+  bool _uploadCancelled = false; // NEW
 
   @override
   void initState() {
@@ -160,32 +164,128 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     return text[0].toUpperCase() + text.substring(1);
   }
 
+  Future<void> _uploadAttachmentsWithProgress() async {
+    if (selectedFiles.isEmpty) return;
+
+    _uploadCancelled = false;
+    setState(() => _isUploading = true);
+
+    // Show progress dialog
+    await UploadProgressDialog.show(
+      context,
+      totalFiles: selectedFiles.length,
+      onCancel: () {
+        setState(() => _uploadCancelled = true);
+        Navigator.pop(context);
+      },
+    );
+
+    if (_uploadCancelled) {
+      setState(() => _isUploading = false);
+      return;
+    }
+
+    try {
+      final uploader = ref.read(cloudinaryProvider);
+      final List<AssignmentAttachment> newAttachments = [];
+
+      for (int i = 0; i < selectedFiles.length; i++) {
+        final file = selectedFiles[i];
+
+        // Update progress dialog
+        if (mounted) {
+          UploadProgressDialog.update(context, i, selectedFiles.length, 0.0);
+        }
+
+        final url = await uploader.uploadFile(
+          file,
+          onSendProgress: (sent, total) {
+            final progress = sent / total;
+            if (mounted) {
+              UploadProgressDialog.update(
+                context,
+                i,
+                selectedFiles.length,
+                progress,
+              );
+            }
+          },
+        );
+
+        // Check if upload was cancelled
+        if (_uploadCancelled && mounted) {
+          UploadProgressDialog.close(context);
+          setState(() => _isUploading = false);
+          return;
+        }
+
+        final attachment = AssignmentAttachment(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          fileName: file.path.split('/').last,
+          fileUrl: url,
+          fileType: file.path.split('.').last.toLowerCase(),
+          fileSize: await file.length(),
+          uploadedBy: widget.ownerId,
+          uploadedAt: Timestamp.now(),
+        );
+        newAttachments.add(attachment);
+      }
+
+      // Update UI with uploaded attachments
+      setState(() {
+        uploadedAttachments = [...uploadedAttachments, ...newAttachments];
+        selectedFiles = []; // Clear selected files
+        _isUploading = false;
+      });
+
+      // Complete the dialog
+      if (mounted) {
+        UploadProgressDialog.complete(context);
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          UploadProgressDialog.close(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${newAttachments.length} file(s) uploaded successfully!',
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isUploading = false);
+      if (mounted) {
+        UploadProgressDialog.close(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final now = Timestamp.now();
-
-    if (selectedFiles.isNotEmpty) {
-      final uploader = ref.read(cloudinaryProvider);
-
-      for (final file in selectedFiles) {
-        final url = await uploader.uploadFile(file);
-
-        uploadedAttachments.add(
-          AssignmentAttachment(
-            id: DateTime.now().microsecondsSinceEpoch.toString(),
-            fileName: file.path.split('/').last,
-            fileUrl: url,
-            fileType: file.path.split('.').last.toLowerCase(),
-            fileSize: await file.length(),
-            uploadedBy: widget.ownerId,
-            uploadedAt: Timestamp.now(),
-          ),
-        );
-      }
+    // Upload attachments first
+    if (selectedFiles.isNotEmpty && !_uploadCancelled) {
+      await _uploadAttachmentsWithProgress();
     }
+
+    // If upload was cancelled, don't proceed
+    if (_uploadCancelled) {
+      return;
+    }
+
+    final now = Timestamp.now();
 
     final assignment = AssignmentModel(
       id: widget.assignment?.id ?? "",
@@ -215,7 +315,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.assignment != null;
-    final isLoading = widget.isLoading;
+    final isLoading = widget.isLoading || _isUploading;
 
     return Form(
       key: _formKey,
@@ -540,9 +640,54 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           // Attachment Picker
           AttachmentPicker(
             onChanged: (files) {
-              selectedFiles = files;
+              setState(() {
+                selectedFiles = files;
+              });
             },
           ),
+
+          // Show selected files count with upload status
+          if (selectedFiles.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isUploading ? Icons.cloud_upload : Icons.cloud_queue,
+                    color: Colors.blue.shade700,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _isUploading
+                          ? 'Uploading ${selectedFiles.length} file(s)...'
+                          : '${selectedFiles.length} file(s) ready to upload',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                  if (!_isUploading)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        setState(() {
+                          selectedFiles = [];
+                        });
+                      },
+                      color: Colors.grey.shade600,
+                    ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 24),
 
