@@ -45,8 +45,10 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   late final TextEditingController courseController;
   late final TextEditingController notesController;
   late final TextEditingController estimatedHoursController;
+  late final TextEditingController customTypeController;
 
-  AssignmentType type = AssignmentType.homework;
+  String type = 'homework';
+  String selectedTypeOption = 'homework';
   AssignmentPriority priority = AssignmentPriority.medium;
   AssignmentStatus status = AssignmentStatus.pending;
   AssignmentDifficulty difficulty = AssignmentDifficulty.medium;
@@ -74,10 +76,17 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     estimatedHoursController = TextEditingController(
       text: assignment?.estimatedHours.toString() ?? "1",
     );
+    customTypeController = TextEditingController();
 
     if (assignment != null) {
       isMultiDay = assignment.isMultiDay;
       type = assignment.type;
+      if (AssignmentType.values.map((e) => e.name).contains(type)) {
+        selectedTypeOption = type;
+      } else {
+        selectedTypeOption = 'custom';
+        customTypeController.text = type;
+      }
       priority = assignment.priority;
       status = assignment.status;
       difficulty = assignment.difficulty;
@@ -99,6 +108,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     courseController.dispose();
     notesController.dispose();
     estimatedHoursController.dispose();
+    customTypeController.dispose();
     super.dispose();
   }
 
@@ -358,26 +368,59 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           const SizedBox(height: 16),
 
           // Type Dropdown
-          DropdownButtonFormField<AssignmentType>(
-            initialValue: type,
+          DropdownButtonFormField<String>(
+            initialValue: selectedTypeOption,
             decoration: const InputDecoration(
               labelText: "Type",
               border: OutlineInputBorder(),
             ),
-            items: AssignmentType.values
-                .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(_capitalize(e.name)),
+            items: [
+              ...AssignmentType.values
+                  .where((e) => e.name != 'custom')
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.name,
+                      child: Text(_capitalize(e.name)),
+                    ),
                   ),
-                )
-                .toList(),
+              const DropdownMenuItem(value: 'custom', child: Text('Custom')),
+            ],
             onChanged: (v) {
               setState(() {
-                type = v!;
+                selectedTypeOption = v!;
+                if (v != 'custom') {
+                  type = v;
+                  customTypeController.clear();
+                } else {
+                  type = '';
+                }
               });
             },
           ),
+
+          const SizedBox(height: 16),
+
+          if (selectedTypeOption == 'custom')
+            TextFormField(
+              controller: customTypeController,
+              decoration: const InputDecoration(
+                labelText: "Enter Custom Assignment Type",
+                border: OutlineInputBorder(),
+                hintText: "e.g., Research Paper, Case Study",
+              ),
+              validator: (value) {
+                if (selectedTypeOption == 'custom' &&
+                    (value == null || value.trim().isEmpty)) {
+                  return 'Please enter a custom assignment type';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  type = value.trim();
+                });
+              },
+            ),
 
           const SizedBox(height: 16),
 

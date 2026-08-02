@@ -29,7 +29,7 @@ class AssignmentModel extends Equatable {
   final String description;
   final String course;
 
-  final AssignmentType type;
+  final String type;
   final AssignmentPriority priority;
   final AssignmentStatus status;
   final AssignmentDifficulty difficulty;
@@ -79,7 +79,7 @@ class AssignmentModel extends Equatable {
     String? title,
     String? description,
     String? course,
-    AssignmentType? type,
+    String? type,
     AssignmentPriority? priority,
     AssignmentStatus? status,
     AssignmentDifficulty? difficulty,
@@ -123,7 +123,7 @@ class AssignmentModel extends Equatable {
       'title': title,
       'description': description,
       'course': course,
-      'type': type.name,
+      'type': type,
       'priority': priority.name,
       'status': status.name,
       'difficulty': difficulty.name,
@@ -149,10 +149,7 @@ class AssignmentModel extends Equatable {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       course: map['course'] ?? '',
-      type: AssignmentType.values.firstWhere(
-        (e) => e.name == map['type'],
-        orElse: () => AssignmentType.homework,
-      ),
+      type: map['type'] ?? 'homework',
       priority: AssignmentPriority.values.firstWhere(
         (e) => e.name == map['priority'],
         orElse: () => AssignmentPriority.medium,

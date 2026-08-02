@@ -107,7 +107,7 @@ class AssignmentFilterState {
                 a.title.toLowerCase().contains(query) ||
                 a.course.toLowerCase().contains(query) ||
                 a.description.toLowerCase().contains(query) ||
-                a.type.name.toLowerCase().contains(query) ||
+                a.type.toLowerCase().contains(query) ||
                 a.status.name.toLowerCase().contains(query),
           )
           .toList();

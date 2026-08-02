@@ -93,7 +93,7 @@ class AssignmentScreen extends ConsumerWidget {
 
     return AppScaffold(
       centerTitle: true,
-      title: isSelectionMode ? "Select Assignments" : "Assignments",
+      title: isSelectionMode ? "Select Tasks" : "Tasks",
       actions: [
         // Hide search and FAB in selection mode
         if (!isSelectionMode) ...[

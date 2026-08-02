@@ -76,7 +76,7 @@ class AssignmentSearchDelegate extends SearchDelegate<AssignmentModel?> {
               a.title.toLowerCase().contains(q) ||
               a.course.toLowerCase().contains(q) ||
               a.description.toLowerCase().contains(q) ||
-              a.type.name.toLowerCase().contains(q) ||
+              a.type.toLowerCase().contains(q) ||
               a.status.name.toLowerCase().contains(q),
         )
         .toList();
@@ -182,21 +182,21 @@ class AssignmentSearchDelegate extends SearchDelegate<AssignmentModel?> {
     );
   }
 
-  IconData _getTypeIcon(AssignmentType type) {
+  IconData _getTypeIcon(String type) {
     switch (type) {
-      case AssignmentType.homework:
+      case 'homework':
         return Icons.home_work;
-      case AssignmentType.lab:
+      case 'lab':
         return Icons.science;
-      case AssignmentType.quiz:
+      case 'quiz':
         return Icons.quiz;
-      case AssignmentType.presentation:
+      case 'presentation':
         return Icons.present_to_all;
-      case AssignmentType.project:
+      case 'project':
         return Icons.folder_sharp;
-      case AssignmentType.exam:
+      case 'exam':
         return Icons.assignment;
-      case AssignmentType.custom:
+      default:
         return Icons.add_task;
     }
   }

@@ -159,7 +159,7 @@ class _AssignmentDetailScreenState
                         child: _buildInfoRow(
                           icon: Icons.category,
                           label: 'Type',
-                          value: _capitalize(_assignment.type.name),
+                          value: _capitalize(_assignment.type),
                         ),
                       ),
                       const SizedBox(width: 8),
