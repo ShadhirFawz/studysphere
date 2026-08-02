@@ -58,8 +58,8 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
   DateTime startDate = DateTime.now();
   DateTime dueDate = DateTime.now().add(const Duration(days: 7));
 
-  bool _isUploading = false; // NEW
-  bool _uploadCancelled = false; // NEW
+  bool _isUploading = false;
+  bool _uploadCancelled = false;
 
   @override
   void initState() {
@@ -180,7 +180,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
     _uploadCancelled = false;
     setState(() => _isUploading = true);
 
-    // Show progress dialog
     await UploadProgressDialog.show(
       context,
       totalFiles: selectedFiles.length,
@@ -202,7 +201,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       for (int i = 0; i < selectedFiles.length; i++) {
         final file = selectedFiles[i];
 
-        // Update progress dialog
         if (mounted) {
           UploadProgressDialog.update(context, i, selectedFiles.length, 0.0);
         }
@@ -222,7 +220,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
           },
         );
 
-        // Check if upload was cancelled
         if (_uploadCancelled && mounted) {
           UploadProgressDialog.close(context);
           setState(() => _isUploading = false);
@@ -241,14 +238,12 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
         newAttachments.add(attachment);
       }
 
-      // Update UI with uploaded attachments
       setState(() {
         uploadedAttachments = [...uploadedAttachments, ...newAttachments];
-        selectedFiles = []; // Clear selected files
+        selectedFiles = [];
         _isUploading = false;
       });
 
-      // Complete the dialog
       if (mounted) {
         UploadProgressDialog.complete(context);
         await Future.delayed(const Duration(milliseconds: 500));
@@ -285,12 +280,10 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       return;
     }
 
-    // Upload attachments first
     if (selectedFiles.isNotEmpty && !_uploadCancelled) {
       await _uploadAttachmentsWithProgress();
     }
 
-    // If upload was cancelled, don't proceed
     if (_uploadCancelled) {
       return;
     }
@@ -332,47 +325,126 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          // Title Field
+          // ============================================================
+          // SECTION 1: Basic Information
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Basic Information",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+
+          // Title
+          const Text(
+            "Title *",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TextFormField(
             controller: titleController,
             decoration: const InputDecoration(
-              labelText: "Title",
+              hintText: "Enter assignment title",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             validator: (v) => v == null || v.isEmpty ? "Required" : null,
           ),
-
           const SizedBox(height: 16),
 
-          // Description Field
+          // Description
+          const Text(
+            "Description",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TextFormField(
             controller: descriptionController,
             decoration: const InputDecoration(
-              labelText: "Description",
+              hintText: "Enter assignment description",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             maxLines: 3,
           ),
-
           const SizedBox(height: 16),
 
-          // Course Field
+          // Course
+          const Text(
+            "Course *",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TextFormField(
             controller: courseController,
             decoration: const InputDecoration(
-              labelText: "Course",
+              hintText: "Enter course name",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+            ),
+            validator: (v) => v == null || v.isEmpty ? "Required" : null,
+          ),
+          const SizedBox(height: 20),
+
+          // ============================================================
+          // SECTION 2: Assignment Details
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Assignment Details",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          // Type Dropdown
+          // Type
+          const Text(
+            "Type",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           DropdownButtonFormField<String>(
             initialValue: selectedTypeOption,
             decoration: const InputDecoration(
-              labelText: "Type",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             items: [
               ...AssignmentType.values
@@ -397,16 +469,28 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
+          const SizedBox(height: 10),
 
-          const SizedBox(height: 16),
-
-          if (selectedTypeOption == 'custom')
+          // Custom Type (Conditional)
+          if (selectedTypeOption == 'custom') ...[
+            const Text(
+              "Custom Type Name",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
             TextFormField(
               controller: customTypeController,
               decoration: const InputDecoration(
-                labelText: "Enter Custom Assignment Type",
-                border: OutlineInputBorder(),
                 hintText: "e.g., Research Paper, Case Study",
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
               ),
               validator: (value) {
                 if (selectedTypeOption == 'custom' &&
@@ -421,15 +505,27 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                 });
               },
             ),
+            const SizedBox(height: 16),
+          ],
 
-          const SizedBox(height: 16),
-
-          // Priority Dropdown
+          // Priority
+          const Text(
+            "Priority",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           DropdownButtonFormField<AssignmentPriority>(
             initialValue: priority,
             decoration: const InputDecoration(
-              labelText: "Priority",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             items: AssignmentPriority.values
                 .map(
@@ -445,15 +541,26 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
           const SizedBox(height: 16),
 
-          // Status Dropdown
+          // Status
+          const Text(
+            "Status",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           DropdownButtonFormField<AssignmentStatus>(
             initialValue: status,
             decoration: const InputDecoration(
-              labelText: "Status",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             items: AssignmentStatus.values
                 .map(
@@ -469,15 +576,26 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
           const SizedBox(height: 16),
 
-          // Difficulty Dropdown
+          // Difficulty
+          const Text(
+            "Difficulty",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           DropdownButtonFormField<AssignmentDifficulty>(
             initialValue: difficulty,
             decoration: const InputDecoration(
-              labelText: "Difficulty",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
             items: AssignmentDifficulty.values
                 .map(
@@ -493,22 +611,57 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
           const SizedBox(height: 16),
 
           // Estimated Hours
+          const Text(
+            "Estimated Hours",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TextFormField(
             controller: estimatedHoursController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
-              labelText: "Estimated Hours",
+              hintText: "Enter estimated hours",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ============================================================
+          // SECTION 3: Tags & Checklist
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Tags & Checklist",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
             ),
           ),
 
-          const SizedBox(height: 16),
-
           // Tags Input
+          const Text(
+            "Tags",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TagInputField(
             tags: tags,
             onTagsChanged: (updatedTags) {
@@ -517,10 +670,18 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Checklist Section
+          const Text(
+            "Checklist",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           ChecklistSection(
             items: checklist,
             onChanged: (updatedChecklist) {
@@ -529,8 +690,22 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
           const SizedBox(height: 20),
+
+          // ============================================================
+          // SECTION 4: Schedule
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Schedule",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ),
 
           // Multi-Day Toggle
           SwitchListTile(
@@ -560,7 +735,6 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               });
             },
           ),
-
           const SizedBox(height: 16),
 
           // Date Picker Section
@@ -573,10 +747,19 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (!isMultiDay)
+                  if (!isMultiDay) ...[
+                    const Text(
+                      "Date",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     ListTile(
                       title: Text(
-                        "Date: ${selectedDate.toLocal().toString().split(' ')[0]}",
+                        selectedDate.toLocal().toString().split(' ')[0],
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       leading: const Icon(
@@ -589,11 +772,21 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                       ),
                       tileColor: Colors.grey.shade50,
                     ),
+                  ],
 
                   if (isMultiDay) ...[
+                    const Text(
+                      "Start Date",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     ListTile(
                       title: Text(
-                        "Start Date: ${startDate.toLocal().toString().split(' ')[0]}",
+                        startDate.toLocal().toString().split(' ')[0],
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       leading: const Icon(
@@ -606,10 +799,19 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                       ),
                       tileColor: Colors.grey.shade50,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Due Date",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     ListTile(
                       title: Text(
-                        "Due Date: ${dueDate.toLocal().toString().split(' ')[0]}",
+                        dueDate.toLocal().toString().split(' ')[0],
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       leading: const Icon(
@@ -654,16 +856,34 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               ),
             ),
           ],
-
           const SizedBox(height: 20),
+
+          // ============================================================
+          // SECTION 5: Attachments
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Attachments",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ),
 
           // Current Attachments
           if (uploadedAttachments.isNotEmpty) ...[
             const Text(
               "Current Attachments",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             ...uploadedAttachments.asMap().entries.map((entry) {
               final index = entry.key;
               final file = entry.value;
@@ -677,10 +897,19 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
                 },
               );
             }),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
           ],
 
           // Attachment Picker
+          const Text(
+            "Add Attachments",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           AttachmentPicker(
             onChanged: (files) {
               setState(() {
@@ -689,7 +918,7 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
             },
           ),
 
-          // Show selected files count with upload status
+          // Selected files status
           if (selectedFiles.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
@@ -731,22 +960,49 @@ class _AssignmentFormState extends ConsumerState<AssignmentForm> {
               ),
             ),
           ],
+          const SizedBox(height: 20),
 
-          const SizedBox(height: 24),
+          // ============================================================
+          // SECTION 6: Notes
+          // ============================================================
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const Text(
+              "Additional Notes",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ),
 
-          // Notes Field
+          const Text(
+            "Notes",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
           TextFormField(
             controller: notesController,
             maxLines: 5,
             decoration: const InputDecoration(
-              labelText: "Notes",
+              hintText: "Enter any additional notes...",
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
           ),
-
           const SizedBox(height: 30),
 
-          // Submit Button
+          // ============================================================
+          // SECTION 7: Submit Button
+          // ============================================================
           FilledButton(
             onPressed: isLoading ? null : submit,
             style: FilledButton.styleFrom(

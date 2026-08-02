@@ -58,7 +58,7 @@ class _AddAssignmentScreenState extends ConsumerState<AddAssignmentScreen> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return AppScaffold(
-      title: "Add Assignment",
+      title: "Add Task",
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : AssignmentForm(
