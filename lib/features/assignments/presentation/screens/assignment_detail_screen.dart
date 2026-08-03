@@ -8,6 +8,7 @@ import '../../data/models/assignment_model.dart';
 import '../../data/models/assignment_checklist_item.dart';
 import '../providers/assignment_provider.dart';
 import '../providers/assignment_progress_provider.dart';
+import '../providers/assignment_status_provider.dart';
 import '../widgets/priority_chip.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/assignment_attachment_card.dart';
@@ -31,10 +32,29 @@ class _AssignmentDetailScreenState
   void initState() {
     super.initState();
     _assignment = widget.assignment;
+    // Auto-update status on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoUpdateStatus();
+    });
+  }
+
+  Future<void> _autoUpdateStatus() async {
+    try {
+      await updateAssignmentStatus(ref, _assignment);
+      // Refresh the assignment data
+      final repo = ref.read(assignmentRepositoryProvider);
+      final updated = await repo.getAssignmentById(_assignment.id);
+      if (updated != null && mounted) {
+        setState(() {
+          _assignment = updated;
+        });
+      }
+    } catch (e) {
+      // Silently fail - status will update on next load
+    }
   }
 
   Future<void> _toggleChecklistItem(AssignmentChecklistItem item) async {
-    // Show confirmation dialog
     final shouldComplete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -64,7 +84,6 @@ class _AssignmentDetailScreenState
     setState(() => _isUpdating = true);
 
     try {
-      // Update the checklist item locally
       final updatedChecklist = _assignment.checklist.map((e) {
         if (e.id == item.id) {
           return e.copyWith(completed: !e.completed);
@@ -72,21 +91,21 @@ class _AssignmentDetailScreenState
         return e;
       }).toList();
 
-      // Update the assignment with new checklist
       final updatedAssignment = _assignment.copyWith(
         checklist: updatedChecklist,
         updatedAt: Timestamp.now(),
       );
 
-      // Save to Firestore
       final repo = ref.read(assignmentRepositoryProvider);
       await repo.updateAssignment(updatedAssignment);
 
-      // Update local state
       setState(() {
         _assignment = updatedAssignment;
         _isUpdating = false;
       });
+
+      // Auto-update status after checklist change
+      await _autoUpdateStatus();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,6 +139,21 @@ class _AssignmentDetailScreenState
     final progressService = ref.watch(assignmentProgressProvider);
     final progress = progressService.calculateProgress(_assignment);
 
+    // Get auto-calculated status
+    final autoStatus = ref.watch(autoAssignmentStatusProvider(_assignment));
+
+    // Use auto-status for display if not manually set
+    final displayStatus = ref.watch(shouldAutoUpdateStatusProvider(_assignment))
+        ? autoStatus
+        : _assignment.status;
+
+    // Update local assignment status if different from display status
+    if (_assignment.status != displayStatus && !_isUpdating) {
+      setState(() {
+        _assignment = _assignment.copyWith(status: displayStatus);
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_assignment.title),
@@ -140,8 +174,59 @@ class _AssignmentDetailScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header Section
-                  _buildHeader(context, progress),
+                  _buildHeader(context, progress, displayStatus),
+                  const SizedBox(height: 16),
+
+                  // Status Info Row
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(
+                        displayStatus,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _getStatusColor(
+                          displayStatus,
+                        ).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(displayStatus),
+                          color: _getStatusColor(displayStatus),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Status: ${_getStatusDisplayText(displayStatus)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getStatusColor(displayStatus),
+                                ),
+                              ),
+                              if (ref.watch(
+                                shouldAutoUpdateStatusProvider(_assignment),
+                              ))
+                                Text(
+                                  'Auto-updated based on dates',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // Course Info
@@ -177,7 +262,7 @@ class _AssignmentDetailScreenState
                   ),
                   const SizedBox(height: 8),
 
-                  // Priority & Status
+                  // Priority & Status (using display status)
                   Row(
                     children: [
                       Expanded(
@@ -192,7 +277,7 @@ class _AssignmentDetailScreenState
                         child: _buildChipRow(
                           icon: Icons.task_alt,
                           label: 'Status',
-                          widget: StatusChip(status: _assignment.status),
+                          widget: StatusChip(status: displayStatus),
                         ),
                       ),
                     ],
@@ -263,7 +348,7 @@ class _AssignmentDetailScreenState
                     const SizedBox(height: 16),
                   ],
 
-                  // Checklist Section (Interactive)
+                  // Checklist Section
                   if (_assignment.checklist.isNotEmpty) ...[
                     _buildChecklistSection(),
                     const SizedBox(height: 16),
@@ -313,8 +398,12 @@ class _AssignmentDetailScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context, int progress) {
-    final isCompleted = _assignment.status == AssignmentStatus.completed;
+  Widget _buildHeader(
+    BuildContext context,
+    int progress,
+    AssignmentStatus status,
+  ) {
+    final isCompleted = status == AssignmentStatus.completed;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -391,6 +480,8 @@ class _AssignmentDetailScreenState
       ),
     );
   }
+
+  // ... (rest of the methods remain the same with minor updates)
 
   Widget _buildInfoRow({
     required IconData icon,
@@ -749,5 +840,66 @@ class _AssignmentDetailScreenState
     ];
     final index = tag.hashCode.abs() % colors.length;
     return colors[index];
+  }
+
+  // ============================================
+  // Status Helper Methods
+  // ============================================
+
+  Color _getStatusColor(AssignmentStatus status) {
+    switch (status) {
+      case AssignmentStatus.draft:
+        return Colors.grey;
+      case AssignmentStatus.pending:
+        return Colors.orange;
+      case AssignmentStatus.inProgress:
+        return Colors.blue;
+      case AssignmentStatus.submitted:
+        return Colors.teal;
+      case AssignmentStatus.completed:
+        return Colors.green;
+      case AssignmentStatus.cancelled:
+        return Colors.red;
+      case AssignmentStatus.overdue:
+        return Colors.deepOrange;
+    }
+  }
+
+  IconData _getStatusIcon(AssignmentStatus status) {
+    switch (status) {
+      case AssignmentStatus.draft:
+        return Icons.drafts;
+      case AssignmentStatus.pending:
+        return Icons.pending;
+      case AssignmentStatus.inProgress:
+        return Icons.play_circle;
+      case AssignmentStatus.submitted:
+        return Icons.send;
+      case AssignmentStatus.completed:
+        return Icons.check_circle;
+      case AssignmentStatus.cancelled:
+        return Icons.cancel;
+      case AssignmentStatus.overdue:
+        return Icons.warning;
+    }
+  }
+
+  String _getStatusDisplayText(AssignmentStatus status) {
+    switch (status) {
+      case AssignmentStatus.draft:
+        return '📝 Draft';
+      case AssignmentStatus.pending:
+        return '⏳ Pending';
+      case AssignmentStatus.inProgress:
+        return '🔄 In Progress';
+      case AssignmentStatus.submitted:
+        return '📤 Submitted';
+      case AssignmentStatus.completed:
+        return '✅ Completed';
+      case AssignmentStatus.cancelled:
+        return '❌ Cancelled';
+      case AssignmentStatus.overdue:
+        return '⚠️ Overdue';
+    }
   }
 }
